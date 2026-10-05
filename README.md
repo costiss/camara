@@ -108,6 +108,47 @@ src/
 └── lib/            api adapters, vote semantics, breakdowns, geo shapes
 ```
 
+## API proxy (`server/`)
+
+A small Go service sits between the app and the government APIs so traffic
+does not multiply with every visitor:
+
+- **Shared cache** in memory, per path: a recorded roll-call or vote detail
+  6 h, deputies 6 h, propositions 1 h, vote lists 5 min, events 10 min.
+  Recently expired entries are served at once while a fresh copy is fetched
+  in the background; when an API fails, the last good copy is served for up
+  to 24 h. Size is capped (LRU, 256 MB by default).
+- **Request coalescing**: concurrent identical requests become one upstream call.
+- **Global rate limit per API** (token bucket + concurrency cap): Câmara
+  5 req/s, Senado 2 req/s by default. A 429/503 with `Retry-After` pauses all
+  calls to that API.
+- **Per-client limit** (20 req/s, burst 120 per IP) so one visitor cannot use
+  up the shared budget.
+- Only `GET /api/camara/*` and `GET /api/senado/*` are proxied (fixed hosts,
+  path allowlist); CORS headers are added by the proxy.
+
+```bash
+npm run dev:api        # proxy on :8080 (needs Go 1.24)
+npm run dev            # Vite forwards /api to it (.env.development sets VITE_API_PROXY=/api)
+curl localhost:8080/healthz   # cache size, hits, misses, stale, rejected
+```
+
+Production: build the app with `VITE_API_PROXY=/api` (same origin, behind a
+reverse proxy) or the proxy's full URL, and run the container
+(`docker build -t congresso-proxy server/`). Without `VITE_API_PROXY` the
+app calls the APIs directly.
+
+| Variable | Default |
+| --- | --- |
+| `PROXY_ADDR` | `:8080` |
+| `PROXY_ALLOWED_ORIGINS` | `*` (comma-separated list to restrict) |
+| `PROXY_CACHE_MAX_MB` / `PROXY_STALE_MAX` | `256` / `24h` |
+| `PROXY_QUEUE_TIMEOUT` / `PROXY_UPSTREAM_TIMEOUT` | `15s` / `20s` |
+| `PROXY_CLIENT_RPS` / `PROXY_CLIENT_BURST` | `20` / `120` |
+| `PROXY_TRUST_FORWARDED` | `false` (set behind a reverse proxy to read `X-Forwarded-For`) |
+| `CAMARA_RPS` / `CAMARA_BURST` / `CAMARA_MAX_CONCURRENT` | `5` / `10` / `4` |
+| `SENADO_RPS` / `SENADO_BURST` / `SENADO_MAX_CONCURRENT` | `2` / `4` / `2` |
+
 ## Getting started
 
 ```bash

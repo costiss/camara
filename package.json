@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "cd server && go run .",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

@@ -8,9 +8,10 @@
  */
 import type { Parlamentar, Votacao, VotoParlamentar } from "../types";
 import { CADEIRAS, VotoClassifier, VoteTally } from "../votos";
+import { SENADO_BASE } from "./config";
 import { getJson } from "./http";
 
-const BASE = "https://legis.senado.leg.br/dadosabertos";
+const BASE = SENADO_BASE;
 
 /* ------------------------------ helpers ------------------------------- */
 

@@ -15,12 +15,13 @@ import type {
   VotoParlamentar,
 } from "../types";
 import { VotoClassifier } from "../votos";
+import { CAMARA_BASE, VIA_PROXY } from "./config";
 import { createLimiter, getJson, getPaged, hasRel, type PagedResult } from "./http";
 
-const BASE = "https://dadosabertos.camara.leg.br/api/v2";
+const BASE = CAMARA_BASE;
 
 /** Cap concurrent Câmara requests to stay under its rate limiter. */
-const limit = createLimiter(3);
+const limit = createLimiter(VIA_PROXY ? 8 : 3);
 const getApi = <T>(url: string, init?: RequestInit) => limit(() => getJson<T>(url, init));
 const getApiPaged = <T>(url: string) => limit(() => getPaged<T>(url));
 
