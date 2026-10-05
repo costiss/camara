@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { MemberAvatar } from "@/components/shared";
-import { useDebouncedValue } from "@/hooks/useUi";
+import { useDebouncedValue, useQueryParam } from "@/hooks/useUi";
 import { partyColor } from "@/lib/parties";
 import type { Casa, Parlamentar } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ export function MembersCard({ casa, membros, uf, partido, onClear, onSelect }: {
   onClear: () => void;
   onSelect: (p: Parlamentar) => void;
 }) {
-  const [q, setQ] = useState("");
+  const [q, setQ] = useQueryParam("q");
   const [limite, setLimite] = useState(PAGINA);
   const query = norm(useDebouncedValue(q, 150).trim());
   const filtrados = useMemo(
@@ -45,7 +45,7 @@ export function MembersCard({ casa, membros, uf, partido, onClear, onSelect }: {
       </div>
       <label className="relative mb-2 block">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-5" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome, partido ou UF" className="field pl-9" aria-label={`Buscar ${rotulo}`} />
+        <input value={q} onChange={(e) => setQ(e.target.value || null)} placeholder="Nome, partido ou UF" className="field pl-9" aria-label={`Buscar ${rotulo}`} />
       </label>
       <ol className="flex flex-col">
         {filtrados.slice(0, limite).map((m, i) => (

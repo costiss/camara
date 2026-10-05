@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { navigate } from "@/hooks/useUi";
+import { router, votacaoHref } from "@/hooks/useUi";
 import { addDays, isoDate } from "@/lib/format";
 import type { Deliberacao } from "@/lib/deliberacoes";
 import { cn } from "@/lib/utils";
@@ -60,7 +60,7 @@ export function VotesDock({
                 type="button"
                 role="listitem"
                 disabled={!d.primeira}
-                onClick={() => d.primeira && navigate("votacoes", d.primeira.principal.id)}
+                onClick={() => d.primeira && router.abrir(votacaoHref(d.primeira.principal))}
                 title={`${dd}/${m}: ${d.camara} na Câmara, ${d.senado} no Senado`}
                 aria-label={`${dd}/${m}: ${n} votações`}
                 className={cn(

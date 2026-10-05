@@ -1,14 +1,13 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProposicoesPorIds } from "@/lib/api";
-import { addDays, isoDate } from "@/lib/format";
+import { Periodo } from "@/lib/periodo";
 import { DeliberacaoBuilder, type Deliberacao } from "@/lib/deliberacoes";
 import type { Casa, Proposicao, Votacao } from "@/lib/types";
 import { useVotacoesPlenario } from "./useCamara";
 import { useSenadoVotacoes } from "./useSenado";
 
-const JANELA_DIAS = 89;
-const MAX_ROTULOS = 400;
+const MAX_ROTULOS = 1200;
 
 /** Resolves Câmara proposition ids (vote prefixes) to their sigla/ementa in one request. */
 export function useProposicoesPorId(ids: string[]) {
@@ -34,11 +33,14 @@ export interface DeliberacoesResult {
   refetch: () => void;
 }
 
-/** Floor votes of both houses over the last ~90 days, grouped by deliberation. */
-export function useDeliberacoes(casa: Casa | "ambas" = "ambas"): DeliberacoesResult {
+/** Floor votes of both houses in a period (default: last 90 days), grouped by deliberation. */
+export function useDeliberacoes(casa: Casa | "ambas" = "ambas", periodoValor = Periodo.PADRAO): DeliberacoesResult & { periodo: Periodo } {
   const [hoje] = useState(() => new Date());
-  const camaraQ = useVotacoesPlenario(isoDate(addDays(hoje, -JANELA_DIAS)), isoDate(hoje));
-  const senadoQ = useSenadoVotacoes();
+  const periodo = useMemo(() => Periodo.de(periodoValor, hoje), [periodoValor, hoje]);
+  const camaraOn = casa !== "senado";
+  const senadoOn = casa !== "camara";
+  const camaraQ = useVotacoesPlenario(periodo, camaraOn);
+  const senadoQ = useSenadoVotacoes({ ini: periodo.ini, fim: periodo.fim }, senadoOn);
 
   const camara = useMemo(() => (casa === "senado" ? [] : (camaraQ.data ?? [])), [casa, camaraQ.data]);
   const senado = useMemo(() => (casa === "camara" ? [] : (senadoQ.data ?? [])), [casa, senadoQ.data]);
@@ -54,9 +56,8 @@ export function useDeliberacoes(casa: Casa | "ambas" = "ambas"): DeliberacoesRes
     [camara, senado, props]
   );
 
-  const camaraOn = casa !== "senado";
-  const senadoOn = casa !== "camara";
   return {
+    periodo,
     deliberacoes,
     isLoading: (camaraOn && camaraQ.isLoading) || (senadoOn && senadoQ.isLoading),
     isError: (!camaraOn || camaraQ.isError) && (!senadoOn || senadoQ.isError),

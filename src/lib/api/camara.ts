@@ -352,35 +352,6 @@ export async function getPartidos(): Promise<Partido[]> {
   return dados.map((p) => ({ id: p.id, sigla: p.sigla, nome: p.nome }));
 }
 
-export interface ProposicoesQuery {
-  tipo?: string;
-  ano?: number;
-  itens?: number;
-  pagina?: number;
-  ordem?: "ASC" | "DESC";
-  ordenarPor?: string;
-}
-
-export async function getProposicoes(
-  q: ProposicoesQuery = {}
-): Promise<PagedResult<Proposicao>> {
-  const url = new URL(`${BASE}/proposicoes`);
-  if (q.tipo) url.searchParams.set("siglaTipo", q.tipo);
-  if (q.ano) url.searchParams.set("ano", String(q.ano));
-  url.searchParams.set("itens", String(q.itens ?? 20));
-  url.searchParams.set("pagina", String(q.pagina ?? 1));
-  url.searchParams.set("ordem", q.ordem ?? "DESC");
-  url.searchParams.set("ordenarPor", q.ordenarPor ?? "id");
-
-  const page = await getApiPaged<RawProposicao>(url.toString());
-  return {
-    items: page.dados.map(mapProposicao),
-    total: page.total,
-    hasNext: hasRel(page.links, "next"),
-    hasPrev: hasRel(page.links, "previous"),
-  };
-}
-
 export async function getProposicao(id: number | string): Promise<Proposicao> {
   const { dados } = await getApi<{ dados: RawProposicao }>(
     `${BASE}/proposicoes/${id}`
@@ -531,17 +502,6 @@ export async function getEventoPauta(eventoId: number | string): Promise<Proposi
   return (dados ?? []).map(mapPautaItem);
 }
 
-/** Cheap historical counter: one item + `X-Total-Count`. */
-export async function countProposicoes(
-  tipo: string,
-  ano: number
-): Promise<number> {
-  const page = await getApiPaged<RawProposicao>(
-    `${BASE}/proposicoes?siglaTipo=${tipo}&ano=${ano}&itens=1`
-  );
-  return page.total ?? page.dados.length;
-}
-
 export async function countVotacoes(
   dataInicio: string,
   dataFim: string
@@ -568,19 +528,6 @@ export async function getProposicoesPorAutor(
 
 /* ---------------- PECs voted in a given year (Câmara floor) ------------- */
 
-/** Split a year into the ≤3-month windows the API requires. */
-function periodosDoAno(ano: number): { ini: string; fim: string }[] {
-  const hoje = new Date().toISOString().slice(0, 10);
-  return [
-    { ini: `${ano}-01-01`, fim: `${ano}-03-31` },
-    { ini: `${ano}-04-01`, fim: `${ano}-06-30` },
-    { ini: `${ano}-07-01`, fim: `${ano}-09-30` },
-    { ini: `${ano}-10-01`, fim: `${ano}-12-31` },
-  ]
-    .map((w) => ({ ini: w.ini, fim: w.fim > hoje ? hoje : w.fim }))
-    .filter((w) => w.ini <= w.fim);
-}
-
 async function paginarTudo<T>(url: string, maxPaginas = 40): Promise<T[]> {
   const out: T[] = [];
   for (let pagina = 1; pagina <= maxPaginas; pagina += 1) {
@@ -591,58 +538,3 @@ async function paginarTudo<T>(url: string, maxPaginas = 40): Promise<T[]> {
   return out;
 }
 
-const TURNO_RE = /em\s+(primeiro|segundo|1[ºo°]|2[ºo°])\s+turno/i;
-
-export function turnoDe(descricao: string): 1 | 2 | null {
-  const m = TURNO_RE.exec(descricao);
-  if (!m) return null;
-  return /^(segundo|2)/i.test(m[1]) ? 2 : 1;
-}
-
-/**
- * PECs whose merit was voted on the Câmara floor during `ano`. A vote
- * belongs to the proposition encoded in its id prefix (descriptions may
- * cite the Senate numbering), and only first/second-round votes count —
- * requerimentos and interstício waivers are procedural.
- */
-export async function getPecsVotadasNoAno(ano: number): Promise<Proposicao[]> {
-  const janelas = periodosDoAno(ano);
-  const pecs = new Map<string, RawProposicao>();
-  const votos: RawVotacao[] = [];
-
-  for (const w of janelas) {
-    const periodo = `dataInicio=${w.ini}&dataFim=${w.fim}`;
-    const [props, vs] = await Promise.all([
-      paginarTudo<RawProposicao>(`${BASE}/proposicoes?siglaTipo=PEC&${periodo}&ordem=ASC&ordenarPor=id`),
-      paginarTudo<RawVotacao>(`${BASE}/votacoes?idOrgao=${PLENARIO_CAMARA}&${periodo}&ordem=ASC&ordenarPor=dataHoraRegistro`),
-    ]);
-    props.forEach((p) => pecs.set(String(p.id), p));
-    votos.push(...vs);
-  }
-
-  const porPec = new Map<string, RawVotacao[]>();
-  for (const v of votos) {
-    const pid = proposicaoIdDaVotacao(v.id);
-    if (!pecs.has(pid) || turnoDe(v.descricao ?? "") === null) continue;
-    porPec.set(pid, [...(porPec.get(pid) ?? []), v]);
-  }
-
-  const result: Proposicao[] = [];
-  for (const [pid, vs] of porPec) {
-    const ordenados = [...vs].sort((a, b) => a.dataHoraRegistro.localeCompare(b.dataHoraRegistro));
-    const ultimo = ordenados[ordenados.length - 1];
-    const turno = turnoDe(ultimo.descricao);
-    const aprovada = /^\s*aprovad/i.test(ultimo.descricao) || ultimo.aprovacao === 1;
-    const base = mapProposicao(pecs.get(pid) as RawProposicao);
-    result.push({
-      ...base,
-      votado: true,
-      votacaoData: ultimo.data,
-      votacaoId: `camara-${ultimo.id}`,
-      status: `${aprovada ? "Aprovada" : "Rejeitada"} em ${turno}º turno no Plenário`,
-      despacho: ultimo.descricao,
-    });
-  }
-
-  return result.sort((a, b) => (b.votacaoData ?? "").localeCompare(a.votacaoData ?? ""));
-}

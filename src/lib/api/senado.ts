@@ -6,7 +6,7 @@
  * `asArray` smooths that over. Media URLs sometimes come back as
  * `http://` and are upgraded to avoid mixed-content blocking.
  */
-import type { Parlamentar, Proposicao, Votacao, VotoParlamentar } from "../types";
+import type { Parlamentar, Votacao, VotoParlamentar } from "../types";
 import { CADEIRAS, VotoClassifier, VoteTally } from "../votos";
 import { getJson } from "./http";
 
@@ -22,19 +22,6 @@ function asArray<T>(value: T | T[] | null | undefined): T[] {
 function https(url?: string | null): string | undefined {
   if (!url) return undefined;
   return url.replace(/^http:\/\//i, "https://");
-}
-
-function textOf(value: unknown): string | undefined {
-  if (value === null || value === undefined) return undefined;
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
-  if (typeof value === "object") {
-    const o = value as Record<string, unknown>;
-    const candidate =
-      o.descricao ?? o.Descricao ?? o.situacao ?? o.Situacao ?? o.nome ?? o.Nome;
-    return candidate === undefined ? undefined : String(candidate);
-  }
-  return undefined;
 }
 
 interface RawIdentificacao {
@@ -117,22 +104,6 @@ interface RawVotacaoPlenario {
   totalVotosAbstencao?: number | null;
   informeLegislativo?: { nomeColegiado?: string; texto?: string };
   votos?: RawVotoSenador[];
-}
-
-interface RawProcesso {
-  id?: number;
-  codigoMateria?: number;
-  identificacao?: string;
-  ementa?: string;
-  autoria?: string;
-  dataApresentacao?: string;
-  dataSituacaoAtual?: string;
-  situacaoAtual?: unknown;
-  tramitando?: unknown;
-  tipoDocumento?: string;
-  casaIdentificadora?: string;
-  enteIdentificador?: string;
-  urlDocumento?: string;
 }
 
 /* ------------------------------ mapping ------------------------------- */
@@ -234,27 +205,6 @@ function mapVotacaoPlenario(v: RawVotacaoPlenario): Votacao {
   };
 }
 
-function mapProcesso(p: RawProcesso): Proposicao {
-  const identificacao = p.identificacao ?? "";
-  const match = /^([A-Z]+)\s+(\d+)\/(\d+)$/.exec(identificacao);
-  return {
-    id: `senado-${p.codigoMateria ?? p.id ?? identificacao}`,
-    casa: "senado",
-    tipo: match?.[1] ?? p.tipoDocumento ?? "MAT",
-    sigla: identificacao || p.tipoDocumento || "Matéria",
-    numero: match ? Number(match[2]) : 0,
-    ano: match ? Number(match[3]) : 0,
-    ementa: p.ementa ?? "",
-    apresentacao: p.dataApresentacao,
-    autor: p.autoria,
-    status: textOf(p.situacaoAtual),
-    situacaoData: p.dataSituacaoAtual,
-    tramitando: String(p.tramitando ?? "").toLowerCase().startsWith("s"),
-    orgao: p.enteIdentificador,
-    url: https(p.urlDocumento),
-  };
-}
-
 /* ----------------------------- endpoints ------------------------------ */
 
 export async function getSenadores(): Promise<Parlamentar[]> {
@@ -303,23 +253,12 @@ export async function getSenadorVotacoes(
 }
 
 /** Recent nominal votes held on the Senate floor. */
-export async function getSenadoVotacoes(): Promise<Votacao[]> {
-  const data = await getJson<RawVotacaoPlenario[]>(`${BASE}/votacao`);
+export async function getSenadoVotacoes(intervalo?: { ini: string; fim: string }): Promise<Votacao[]> {
+  const filtro = intervalo ? `?dataInicio=${intervalo.ini}&dataFim=${intervalo.fim}` : "";
+  const data = await getJson<RawVotacaoPlenario[]>(`${BASE}/votacao${filtro}`);
   return asArray(data)
     .filter((v) => v.dataSessao && v.codigoSessaoVotacao)
     .map(mapVotacaoPlenario)
     .sort((a, b) => b.data.localeCompare(a.data) || b.id.localeCompare(a.id, undefined, { numeric: true }));
 }
 
-/** Senate propositions by type/year via the modern `/processo` endpoint. */
-export async function getSenadoProcessos(q: {
-  sigla: string;
-  ano: number;
-}): Promise<Proposicao[]> {
-  const data = await getJson<RawProcesso[]>(
-    `${BASE}/processo?sigla=${encodeURIComponent(q.sigla)}&ano=${q.ano}`
-  );
-  return asArray(data)
-    .map(mapProcesso)
-    .sort((a, b) => b.numero - a.numero);
-}

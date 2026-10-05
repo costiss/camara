@@ -1,4 +1,4 @@
-import { routeHref } from "@/hooks/useUi";
+import { votacaoHref } from "@/hooks/useUi";
 import { formatTime } from "@/lib/format";
 import { resultadoVotacao } from "@/lib/votos";
 import type { Deliberacao } from "@/lib/deliberacoes";
@@ -30,7 +30,7 @@ export function DeliberacaoSteps({ deliberacao, currentId }: { deliberacao: Deli
           const atual = v.id === currentId;
           return (
             <li key={v.id} className="timeline-item" data-current={atual}>
-              <a href={routeHref("votacoes", v.id)} className={cn("block no-underline", atual ? "text-fg" : "text-fg-2 hover:text-fg")} aria-current={atual || undefined}>
+              <a href={votacaoHref(v)} className={cn("block no-underline", atual ? "text-fg" : "text-fg-2 hover:text-fg")} aria-current={atual || undefined}>
                 <span className="flex items-baseline gap-2 text-[12px]">
                   {v.dataHora && v.dataHora.length > 10 && <span className="tn text-fg-4">{formatTime(v.dataHora)}</span>}
                   <span className={cn("font-medium", TONE[r.tone])}>{r.label}</span>

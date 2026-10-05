@@ -1,16 +1,33 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { ArrowLeft, List } from "lucide-react";
 import { DeliberacaoFeed } from "@/components/hud/DeliberacaoFeed";
 import { HudGrid } from "@/components/hud/HudGrid";
 import { VotesDock } from "@/components/hud/VotesDock";
 import { ErrorState, LoadingRows } from "@/components/shared";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
+import { routeHref, router, useQueryParam, useRoute } from "@/hooks/useUi";
 import type { Parlamentar } from "@/lib/types";
 import { DeliberacaoSteps } from "./DeliberacaoSteps";
 import { PartyBreakdown } from "./PartyBreakdown";
 import { RollCallSheet } from "./RollCallSheet";
 import { VoteHero } from "./VoteHero";
 import { VoteStage } from "./VoteStage";
+
+function VoltarLista({ veioDaLista }: { veioDaLista: boolean }) {
+  if (veioDaLista) {
+    return (
+      <button type="button" className="inline-flex items-center gap-1 self-start text-[12px] text-fg-3 hover:text-fg" onClick={() => window.history.back()}>
+        <ArrowLeft className="h-3.5 w-3.5" /> Voltar à lista
+      </button>
+    );
+  }
+  return (
+    <a href={routeHref("lista")} className="inline-flex items-center gap-1 self-start text-[12px] text-fg-3 no-underline hover:text-fg">
+      <List className="h-3.5 w-3.5" /> Escolher outra votação
+    </a>
+  );
+}
 
 function HeroSkeleton() {
   return (
@@ -33,16 +50,18 @@ export function VotacoesView({ votacaoId, onSelectMember }: {
     [feed.deliberacoes]
   );
   const id = votacaoId ?? padrao;
-  const completa = useVotacaoCompleta(id);
+  const { query } = useRoute();
+  const completa = useVotacaoCompleta(id, query.get("data") ?? undefined);
   const deliberacao = useMemo(
     () => feed.deliberacoes.find((d) => d.votacoes.some((v) => v.id === id)),
     [feed.deliberacoes, id]
   );
 
-  const [uf, setUf] = useState<{ id?: string; uf: string | null }>({ uf: null });
-  const activeUf = uf.id === id ? uf.uf : null;
-  const selectUf = (next: string | null) => setUf({ id, uf: next });
-  const [rollCall, setRollCall] = useState(false);
+  const [uf, selectUf] = useQueryParam("uf");
+  const activeUf = uf || null;
+  const rollCall = query.get("chamada") === "1";
+  const setRollCall = (aberta: boolean) =>
+    router.patch(aberta ? { chamada: "1" } : { chamada: null, voto: null, nome: null });
 
   const { votacao, assentos, tally, orientacoes } = completa;
   const carregando = (!id && feed.isLoading) || (!!id && completa.isLoading);
@@ -55,6 +74,7 @@ export function VotacoesView({ votacaoId, onSelectMember }: {
     </div>
   ) : votacao ? (
     <>
+      <VoltarLista veioDaLista={query.get("de") === "lista"} />
       <VoteHero votacao={votacao} tally={tally} onOpenRollCall={() => setRollCall(true)} />
       {deliberacao && id && <DeliberacaoSteps deliberacao={deliberacao} currentId={id} />}
     </>

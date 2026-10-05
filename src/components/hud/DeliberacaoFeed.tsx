@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { routeHref } from "@/hooks/useUi";
+import { routeHref, votacaoHref } from "@/hooks/useUi";
 import { resultadoVotacao } from "@/lib/votos";
 import type { Deliberacao } from "@/lib/deliberacoes";
-import type { StatusTone } from "@/lib/types";
+import type { Casa, StatusTone } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ErrorState, LoadingRows } from "@/components/shared";
 
@@ -28,7 +27,7 @@ function FeedItem({ d, current }: { d: Deliberacao; current: boolean }) {
   const { dia, hora } = quando(d.dataHora);
   const extra = d.votacoes.length - 1;
   return (
-    <a href={routeHref("votacoes", v.id)} className="ev no-underline" aria-current={current || undefined}>
+    <a href={votacaoHref(v)} className="ev no-underline" aria-current={current || undefined}>
       <span className="tn pt-0.5 text-[12px] leading-tight text-fg-3">
         {dia}
         {hora && <span className="block text-fg-5">{hora}</span>}
@@ -61,6 +60,7 @@ export function DeliberacaoFeed({
   isLoading,
   isError,
   onRetry,
+  casa,
   limit = 14,
   className,
 }: {
@@ -70,11 +70,11 @@ export function DeliberacaoFeed({
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
+  casa?: Casa;
   limit?: number;
   className?: string;
 }) {
-  const [all, setAll] = useState(false);
-  const shown = all ? deliberacoes : deliberacoes.slice(0, limit);
+  const shown = deliberacoes.slice(0, limit);
   return (
     <section className={cn("card", className)} aria-label={title}>
       <div className="card-head">
@@ -97,9 +97,9 @@ export function DeliberacaoFeed({
         </div>
       )}
       {!isLoading && deliberacoes.length > limit && (
-        <button type="button" className="btn btn-sm btn-block mt-3" onClick={() => setAll((a) => !a)}>
-          {all ? "Mostrar menos" : `Ver todas as ${deliberacoes.length} deliberações`}
-        </button>
+        <a href={routeHref("lista", undefined, { casa })} className="btn btn-sm btn-block mt-3 no-underline">
+          Ver todas as {deliberacoes.length} na lista
+        </a>
       )}
     </section>
   );

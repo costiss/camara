@@ -4,13 +4,16 @@ import { HudGrid } from "@/components/hud/HudGrid";
 import { VotesDock } from "@/components/hud/VotesDock";
 import { ErrorState, LoadingRows } from "@/components/shared";
 import { useEventos } from "@/hooks/useCamara";
+import { useQueryEnum } from "@/hooks/useUi";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { addDays, formatTime, isoDate, startOfDay } from "@/lib/format";
 import type { Evento } from "@/lib/types";
 import { EventoItem } from "./EventoItem";
 
-type Janela = "proximas" | "realizadas";
+type Janela = "proximos" | "realizados";
 type Tipo = "todos" | "plenario" | "comissoes";
+const JANELAS: readonly Janela[] = ["proximos", "realizados"];
+const TIPOS: readonly Tipo[] = ["todos", "plenario", "comissoes"];
 
 const diaFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 
@@ -53,20 +56,20 @@ function ProximaSessao({ eventos, isLoading, agora }: { eventos: Evento[]; isLoa
 export function AgendaView() {
   const [agora] = useState(() => Date.now());
   const hoje = startOfDay(new Date(agora));
-  const [janela, setJanela] = useState<Janela>("proximas");
-  const [tipo, setTipo] = useState<Tipo>("todos");
+  const [janela, setJanela] = useQueryEnum<Janela>("periodo", JANELAS, "proximos");
+  const [tipo, setTipo] = useQueryEnum<Tipo>("tipo", TIPOS, "todos");
   const proximosQ = useEventos({ dataInicio: isoDate(hoje), dataFim: isoDate(addDays(hoje, 21)), ordem: "ASC" });
   const realizadosQ = useEventos({ dataInicio: isoDate(addDays(hoje, -21)), dataFim: isoDate(hoje), ordem: "DESC" });
-  const eventosQ = janela === "proximas" ? proximosQ : realizadosQ;
+  const eventosQ = janela === "proximos" ? proximosQ : realizadosQ;
   const feed = useDeliberacoes();
   const todos = useMemo(() => eventosQ.data ?? [], [eventosQ.data]);
   const proximos = useMemo(() => proximosQ.data ?? [], [proximosQ.data]);
 
   const dias = useMemo(() => {
     const lista = todos
-      .filter((e) => (janela === "proximas" ? new Date(e.inicio).getTime() >= agora - 3_600_000 : new Date(e.inicio).getTime() < agora))
+      .filter((e) => (janela === "proximos" ? new Date(e.inicio).getTime() >= agora - 3_600_000 : new Date(e.inicio).getTime() < agora))
       .filter((e) => tipo === "todos" || (tipo === "plenario") === ehPlenario(e))
-      .sort((a, b) => (janela === "proximas" ? 1 : -1) * a.inicio.localeCompare(b.inicio));
+      .sort((a, b) => (janela === "proximos" ? 1 : -1) * a.inicio.localeCompare(b.inicio));
     const map = new Map<string, Evento[]>();
     for (const e of lista) map.set(e.inicio.slice(0, 10), [...(map.get(e.inicio.slice(0, 10)) ?? []), e]);
     return [...map.entries()];
@@ -76,8 +79,8 @@ export function AgendaView() {
     <section className="card flex h-full min-h-[480px] flex-col" aria-label="Eventos">
       <div className="flex flex-wrap items-center gap-2">
         <div className="switch switch-sm" role="group" aria-label="Período">
-          <button type="button" aria-pressed={janela === "proximas"} onClick={() => setJanela("proximas")}>Próximos</button>
-          <button type="button" aria-pressed={janela === "realizadas"} onClick={() => setJanela("realizadas")}>Já realizados</button>
+          <button type="button" aria-pressed={janela === "proximos"} onClick={() => setJanela("proximos")}>Próximos</button>
+          <button type="button" aria-pressed={janela === "realizados"} onClick={() => setJanela("realizados")}>Já realizados</button>
         </div>
         <div className="tabs-mini" role="group" aria-label="Tipo">
           {(["todos", "plenario", "comissoes"] as const).map((t) => (

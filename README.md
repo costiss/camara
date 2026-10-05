@@ -1,7 +1,7 @@
 # Congresso Aberto
 
 A dark, editorial single-page app for following the Brazilian National Congress:
-**PECs**, floor votes, agendas and the composition of the **Câmara dos Deputados**
+floor votes, agendas and the composition of the **Câmara dos Deputados**
 and the **Senado Federal** — built from the official open-data APIs.
 
 Layout and visual language follow [seuimposto.com](https://seuimposto.com/)'s
@@ -25,10 +25,27 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
   every vote of the same session; full roll-call; feed of both houses.
 - **Câmara / Senado** — composition: left/centre/right bar, seats by party,
   map of the leading party per state (click a state to filter), bancadas and members.
-- **PECs** — PECs voted on the Câmara floor in a year, PECs tabled per house and year.
+- **Lista** (`#/lista`) — every floor deliberation of both houses in a period
+  (30/90 days or a year), faceted by result and bill type, with search and
+  paging. A row opens the Votações panel on that vote.
 - **Agenda** — upcoming and past Câmara events with their pauta.
 
 Ctrl K searches deputies, senators and recent votes.
+
+## URL parameters
+
+Every filter lives in the hash query, so any screen can be linked as it is.
+Defaults are left out of the URL.
+
+| Route | Parameters |
+| --- | --- |
+| `#/votacoes/<id>` | `uf`, `modo=plenario`, `chamada=1` (roll-call open), `voto` (`sim`, `nao`, …), `nome`, `data` (Senate session date) |
+| `#/lista` | `casa=camara\|senado`, `periodo=30d\|90d\|<ano>`, `tipo` (`PEC`, `PL`, …), `resultado=aprovada\|rejeitada\|outros`, `nominal=1`, `q`, `ordem=antigas`, `pagina` |
+| `#/camara`, `#/senado` | `uf`, `partido`, `q` |
+| `#/agenda` | `periodo=realizados`, `tipo=plenario\|comissoes` |
+
+Example: `#/lista?casa=senado&periodo=2025&tipo=PEC&resultado=aprovada`.
+Old links such as `#/pecs` are rewritten to their list equivalent.
 
 ## How votes are read
 
@@ -40,8 +57,8 @@ Ctrl K searches deputies, senators and recent votes.
   the source of truth for the result.
 - Senate results come from `resultadoVotacao`, and its roll-call is inline;
   codes such as `AP`, `LS`, `MIS`, `P-NRV` become absent/present-without-vote.
-- **PECs votadas em {ano}** count only 1st/2nd-round floor votes, matching
-  plenary votes to PECs by id prefix within each 3-month API window.
+- The Câmara API caps date ranges at 3 months, so longer periods are fetched
+  in quarterly windows; the Senate takes the whole range in one request.
 
 ## Data sources
 
@@ -69,7 +86,7 @@ src/
 │   ├── shared/     hemicycle, avatars, badges, states
 │   ├── detail/     proposition / member sheets
 │   └── ui/         Radix-based primitives
-├── views/          votacoes, casa (Câmara/Senado), pecs, agenda
+├── views/          votacoes, lista, casa (Câmara/Senado), agenda
 ├── hooks/          TanStack Query hooks + hash router
 └── lib/            api adapters, vote semantics, breakdowns, geo shapes
 ```

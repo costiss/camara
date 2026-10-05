@@ -27,6 +27,22 @@ export class ApiError extends Error {
 }
 
 const DEFAULT_TIMEOUT = 20_000;
+const TENTATIVAS_REDE = 3;
+
+/**
+ * Some backend nodes of the open-data APIs omit CORS headers on a 200 that the
+ * browser then caches for 30 min, so every plain retry fails the same way.
+ * Network-level failures are retried bypassing the HTTP cache.
+ */
+async function buscar(url: string, init: RequestInit): Promise<Response> {
+  for (let tentativa = 1; ; tentativa += 1) {
+    try {
+      return await fetch(url, tentativa === 1 ? init : { ...init, cache: "reload" });
+    } catch (err) {
+      if (init.signal?.aborted || tentativa >= TENTATIVAS_REDE) throw err;
+    }
+  }
+}
 
 export async function getJson<T>(
   url: string,
@@ -36,7 +52,7 @@ export async function getJson<T>(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(url, {
+    const res = await buscar(url, {
       ...init,
       signal: controller.signal,
       headers: { Accept: "application/json", ...(init?.headers ?? {}) },
@@ -65,7 +81,7 @@ export async function getPaged<T>(url: string): Promise<{
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
   try {
-    const res = await fetch(url, {
+    const res = await buscar(url, {
       signal: controller.signal,
       headers: { Accept: "application/json" },
     });

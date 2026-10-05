@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Intervalo } from "@/lib/periodo";
 import {
-  getSenadoProcessos,
   getSenadoVotacoes,
   getSenador,
   getSenadorVotacoes,
@@ -35,18 +35,12 @@ export function useSenadorVotacoes(codigo?: number | string) {
   });
 }
 
-export function useSenadoVotacoes() {
+export function useSenadoVotacoes(intervalo?: Intervalo, enabled = true) {
   return useQuery({
-    queryKey: ["senado-votacoes"],
-    queryFn: getSenadoVotacoes,
+    queryKey: ["senado-votacoes", intervalo?.ini, intervalo?.fim],
+    queryFn: () => getSenadoVotacoes(intervalo),
+    enabled,
     staleTime: STALE,
   });
 }
 
-export function useSenadoProcessos(params: { sigla: string; ano: number }) {
-  return useQuery({
-    queryKey: ["senado-processos", params],
-    queryFn: () => getSenadoProcessos(params),
-    staleTime: 30 * 60 * 1000,
-  });
-}

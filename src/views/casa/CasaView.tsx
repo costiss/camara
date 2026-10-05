@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { BrazilMap, type UfDatum } from "@/components/hud/BrazilMap";
 import { DeliberacaoFeed } from "@/components/hud/DeliberacaoFeed";
 import { HudGrid } from "@/components/hud/HudGrid";
@@ -7,6 +7,7 @@ import { ErrorState, LoadingRows } from "@/components/shared";
 import { useDeputados } from "@/hooks/useCamara";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { useSenadores } from "@/hooks/useSenado";
+import { router, useQueryParam } from "@/hooks/useUi";
 import { bancadas, partidoLiderPorUf } from "@/lib/breakdown";
 import { partyColor, siglaCurta } from "@/lib/parties";
 import type { Casa, Parlamentar } from "@/lib/types";
@@ -64,8 +65,10 @@ export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember:
   const q = useMembros(casa);
   const feed = useDeliberacoes(casa);
   const membros = useMemo(() => q.data ?? [], [q.data]);
-  const [uf, setUf] = useState<string | null>(null);
-  const [partido, setPartido] = useState<string | null>(null);
+  const [ufParam, setUf] = useQueryParam("uf");
+  const [partidoParam, setPartido] = useQueryParam("partido");
+  const uf = ufParam || null;
+  const partido = partidoParam || null;
 
   const mapData = useMemo(() => {
     const out: Record<string, UfDatum> = {};
@@ -101,8 +104,7 @@ export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember:
         uf={uf}
         partido={partido}
         onClear={() => {
-          setUf(null);
-          setPartido(null);
+          router.patch({ uf: null, partido: null });
         }}
         onSelect={onSelectMember}
       />
@@ -140,7 +142,7 @@ export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember:
       right={
         <>
           {!q.isLoading && <BancadasCard membros={membros} partido={partido} onPartido={setPartido} />}
-          <DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} limit={8} />
+          <DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} casa={casa} limit={8} />
         </>
       }
     />

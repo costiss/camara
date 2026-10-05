@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "votacoes", label: "Votações" },
+  { id: "lista", label: "Lista" },
   { id: "camara", label: "Câmara" },
   { id: "senado", label: "Senado" },
-  { id: "pecs", label: "PECs" },
   { id: "agenda", label: "Agenda" },
 ];
 

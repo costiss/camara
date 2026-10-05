@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQueryEnum } from "@/hooks/useUi";
 import { BrazilMap, type UfDatum } from "@/components/hud/BrazilMap";
 import { Hemicycle, type Seat } from "@/components/shared";
 import { agruparVotos, corDaDisputa, ordenarPorEspectro, rankCategoria } from "@/lib/breakdown";
@@ -7,6 +8,7 @@ import { CATEGORIA_COR, CATEGORIA_LABEL, CATEGORIA_ORDEM, resultadoVotacao, type
 import type { Votacao, VotoParlamentar } from "@/lib/types";
 
 type Modo = "mapa" | "plenario";
+const MODOS: readonly Modo[] = ["mapa", "plenario"];
 
 function useMapData(assentos: VotoParlamentar[]) {
   return useMemo(() => {
@@ -66,7 +68,7 @@ export function VoteStage({ votacao, assentos, tally, activeUf, onSelectUf }: {
   activeUf: string | null;
   onSelectUf: (uf: string | null) => void;
 }) {
-  const [modo, setModo] = useState<Modo>("mapa");
+  const [modo, setModo] = useQueryEnum<Modo>("modo", MODOS, "mapa");
   const mapData = useMapData(votacao.secreta ? [] : assentos);
   const seats = useSeats(assentos, activeUf);
   const r = resultadoVotacao(votacao);

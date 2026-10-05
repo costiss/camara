@@ -15,7 +15,8 @@ export interface VotacaoCompleta {
   refetch: () => void;
 }
 
-export function useVotacaoCompleta(id?: string): VotacaoCompleta {
+/** `data` (YYYY-MM-DD) locates a Senate vote outside the default recent window. */
+export function useVotacaoCompleta(id?: string, data?: string): VotacaoCompleta {
   const isCamara = !!id?.startsWith("camara-");
   const rawId = isCamara ? id?.replace(/^camara-/, "") : undefined;
 
@@ -23,7 +24,7 @@ export function useVotacaoCompleta(id?: string): VotacaoCompleta {
   const votosQ = useVotacaoVotos(rawId);
   const orientQ = useVotacaoOrientacoes(rawId);
   const propQ = useProposicao(isCamara ? detalheQ.data?.proposicaoId : undefined);
-  const senadoQ = useSenadoVotacoes();
+  const senadoQ = useSenadoVotacoes(data ? { ini: data, fim: data } : undefined, !isCamara && !!id);
   const deputados = useDeputados();
   const senadores = useSenadores();
 

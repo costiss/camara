@@ -5,7 +5,7 @@ import { MemberAvatar } from "@/components/shared";
 import { useDeputados } from "@/hooks/useCamara";
 import { useSenadores } from "@/hooks/useSenado";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
-import { navigate, useDebouncedValue } from "@/hooks/useUi";
+import { router, useDebouncedValue, votacaoHref } from "@/hooks/useUi";
 import { formatDate } from "@/lib/format";
 import type { Parlamentar } from "@/lib/types";
 
@@ -110,7 +110,7 @@ export function SearchDialog({
                 className="ev grid-cols-[minmax(0,1fr)_auto] items-center"
                 onClick={() => {
                   close();
-                  navigate("votacoes", d.principal.id);
+                  router.abrir(votacaoHref(d.principal));
                 }}
               >
                 <span className="min-w-0">

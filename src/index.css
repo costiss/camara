@@ -162,6 +162,51 @@
       min-height: 0;
       overflow: hidden;
     }
+    .hud-grid-lista {
+      grid-template-columns: var(--col-l) minmax(0, 1fr);
+    }
+  }
+
+  /* Votes table ------------------------------------------------------ */
+  .lista-tabela {
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .lista-tabela th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-panel);
+    padding: 0 10px 8px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-fg-4);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .lista-tabela td {
+    padding: 12px 10px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .lista-tabela tbody tr {
+    position: relative;
+    transition: background-color 120ms ease;
+  }
+  .lista-tabela tbody tr:hover {
+    background: color-mix(in oklab, var(--color-fg) 5%, transparent);
+  }
+  .lista-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .lista-link:focus-visible {
+    outline: none;
+  }
+  .lista-tabela tbody tr:has(.lista-link:focus-visible) {
+    outline: 2px solid var(--color-fg);
+    outline-offset: -2px;
   }
 
   /* Cards ----------------------------------------------------------- */

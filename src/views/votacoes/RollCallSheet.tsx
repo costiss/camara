@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Search } from "lucide-react";
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MemberAvatar } from "@/components/shared";
-import { useDebouncedValue } from "@/hooks/useUi";
+import { useDebouncedValue, useQueryEnum, useQueryParam } from "@/hooks/useUi";
 import { partyColor } from "@/lib/parties";
 import { CATEGORIA_COR, CATEGORIA_LABEL, CATEGORIA_ORDEM } from "@/lib/votos";
 import type { Parlamentar, Votacao, VotoCategoria, VotoParlamentar } from "@/lib/types";
+
+const FILTROS: readonly (VotoCategoria | "todos")[] = ["todos", ...CATEGORIA_ORDEM];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -16,8 +18,8 @@ export function RollCallSheet({ open, onOpenChange, votacao, assentos, onSelect 
   assentos: VotoParlamentar[];
   onSelect: (p: Parlamentar) => void;
 }) {
-  const [q, setQ] = useState("");
-  const [cat, setCat] = useState<VotoCategoria | "todos">("todos");
+  const [q, setQ] = useQueryParam("nome");
+  const [cat, setCat] = useQueryEnum<VotoCategoria | "todos">("voto", FILTROS, "todos");
   const query = norm(useDebouncedValue(q, 150).trim());
 
   const presentes = useMemo(
@@ -47,7 +49,7 @@ export function RollCallSheet({ open, onOpenChange, votacao, assentos, onSelect 
           </SheetDescription>
           <label className="relative mt-3 block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-5" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome, partido ou UF" className="field pl-9" aria-label="Filtrar parlamentares" />
+            <input value={q} onChange={(e) => setQ(e.target.value || null)} placeholder="Nome, partido ou UF" className="field pl-9" aria-label="Filtrar parlamentares" />
           </label>
           <div className="tabs-mini mt-3 flex-wrap" role="group" aria-label="Filtrar por voto">
             <button type="button" aria-pressed={cat === "todos"} onClick={() => setCat("todos")}>Todos</button>

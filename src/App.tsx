@@ -9,7 +9,7 @@ import { useRoute } from "@/hooks/useUi";
 import type { Parlamentar } from "@/lib/types";
 import { AgendaView } from "@/views/agenda/AgendaView";
 import { CasaView } from "@/views/casa/CasaView";
-import { PecsView } from "@/views/pecs/PecsView";
+import { ListaView } from "@/views/lista/ListaView";
 import { VotacoesView } from "@/views/votacoes/VotacoesView";
 
 const queryClient = new QueryClient({
@@ -34,9 +34,9 @@ function Hud() {
     <div className="hud">
       <HudHeader view={route.view} onSearch={abrirBusca} />
       {route.view === "votacoes" && <VotacoesView votacaoId={route.param} onSelectMember={setMembro} />}
+      {route.view === "lista" && <ListaView />}
       {route.view === "camara" && <CasaView key="camara" casa="camara" onSelectMember={setMembro} />}
       {route.view === "senado" && <CasaView key="senado" casa="senado" onSelectMember={setMembro} />}
-      {route.view === "pecs" && <PecsView />}
       {route.view === "agenda" && <AgendaView />}
       <SearchDialog open={busca} onOpenChange={setBusca} onSelectMember={setMembro} />
       <ParlamentarDetail parlamentar={membro} open={!!membro} onOpenChange={(o) => !o && setMembro(null)} />

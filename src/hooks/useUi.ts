@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 export function useDebouncedValue<T>(value: T, delay = 250): T {
   const [debounced, setDebounced] = useState(value);
@@ -12,32 +11,26 @@ export function useDebouncedValue<T>(value: T, delay = 250): T {
 
 /* --------------------------- tiny hash router --------------------------- */
 
-export type View = "votacoes" | "camara" | "senado" | "pecs" | "agenda";
+export type View = "votacoes" | "lista" | "camara" | "senado" | "agenda";
+export type Query = Record<string, string | null | undefined>;
 
 export interface Route {
   view: View;
   param?: string;
+  query: URLSearchParams;
 }
 
-const LEGADO: Record<string, View> = {
-  dashboard: "votacoes",
-  votacao: "votacoes",
-  atividades: "votacoes",
-  deputados: "camara",
-  metricas: "camara",
-  senadores: "senado",
+const VIEWS: View[] = ["votacoes", "lista", "camara", "senado", "agenda"];
+
+const LEGADO: Record<string, { view: View; query?: Query }> = {
+  dashboard: { view: "votacoes" },
+  votacao: { view: "votacoes" },
+  atividades: { view: "lista" },
+  pecs: { view: "lista", query: { tipo: "PEC", periodo: String(new Date().getFullYear()) } },
+  deputados: { view: "camara" },
+  metricas: { view: "camara" },
+  senadores: { view: "senado" },
 };
-
-const VIEWS: View[] = ["votacoes", "camara", "senado", "pecs", "agenda"];
-
-function subscribe(callback: () => void) {
-  window.addEventListener("hashchange", callback);
-  return () => window.removeEventListener("hashchange", callback);
-}
-
-function currentHash(): string {
-  return window.location.hash.replace(/^#\/?/, "").trim();
-}
 
 function decodificar(raw: string): string {
   try {
@@ -47,24 +40,114 @@ function decodificar(raw: string): string {
   }
 }
 
+function serializar(query?: Query | URLSearchParams): string {
+  const out = new URLSearchParams();
+  const entradas = query instanceof URLSearchParams ? [...query.entries()] : Object.entries(query ?? {});
+  for (const [k, v] of entradas) if (v) out.set(k, v);
+  const s = out.toString();
+  return s ? `?${s}` : "";
+}
+
 export function parseRoute(hash: string): Route {
-  const [head, ...rest] = hash.split("/");
+  const [path, search = ""] = hash.split("?");
+  const [head, ...rest] = path.split("/").filter(Boolean);
   const param = rest.length ? decodificar(rest.join("/")) : undefined;
-  if ((VIEWS as string[]).includes(head)) return { view: head as View, param };
-  if (LEGADO[head]) return { view: LEGADO[head], param };
-  return { view: "votacoes" };
+  const query = new URLSearchParams(search);
+  if ((VIEWS as string[]).includes(head)) return { view: head as View, param, query };
+  const legado = LEGADO[head];
+  if (legado) return { view: legado.view, param, query: new URLSearchParams(serializar({ ...legado.query, ...Object.fromEntries(query) })) };
+  return { view: "votacoes", query };
 }
 
-export function routeHref(view: View, param?: string): string {
-  return `#/${view}${param ? `/${encodeURIComponent(param)}` : ""}`;
+export function routeHref(view: View, param?: string, query?: Query): string {
+  return `#/${view}${param ? `/${encodeURIComponent(param)}` : ""}${serializar(query)}`;
 }
 
-export function navigate(view: View, param?: string) {
-  const href = routeHref(view, param);
-  if (window.location.hash !== href) window.location.hash = href.slice(1);
+/** Hash-based router: pushes on navigation, replaces on filter changes. */
+class HashRouter {
+  private readonly listeners = new Set<() => void>();
+
+  constructor() {
+    this.canonicalizar();
+    window.addEventListener("hashchange", () => {
+      this.canonicalizar();
+      this.emit();
+    });
+  }
+
+  /** Rewrites legacy links (e.g. #/pecs) to the route they now resolve to. */
+  private canonicalizar() {
+    const hash = this.hash();
+    const head = hash.split(/[/?]/)[0];
+    if (!LEGADO[head]) return;
+    const r = parseRoute(hash);
+    window.history.replaceState(window.history.state, "", routeHref(r.view, r.param) + serializar(r.query));
+  }
+
+  readonly subscribe = (cb: () => void) => {
+    this.listeners.add(cb);
+    return () => this.listeners.delete(cb);
+  };
+
+  readonly hash = () => window.location.hash.replace(/^#\/?/, "").trim();
+
+  go(view: View, param?: string, query?: Query) {
+    this.abrir(routeHref(view, param, query));
+  }
+
+  abrir(href: string) {
+    if (window.location.hash !== href) window.location.hash = href.slice(1);
+  }
+
+  patch(query: Query) {
+    const atual = parseRoute(this.hash());
+    const next = new URLSearchParams(atual.query);
+    for (const [k, v] of Object.entries(query)) {
+      if (v) next.set(k, v);
+      else next.delete(k);
+    }
+    const href = routeHref(atual.view, atual.param) + serializar(next);
+    if (href === `#/${this.hash()}`) return;
+    window.history.replaceState(window.history.state, "", href);
+    this.emit();
+  }
+
+  private emit() {
+    this.listeners.forEach((cb) => cb());
+  }
+}
+
+export const router = new HashRouter();
+
+/** Link to a vote; Senate votes carry their session date so the page can fetch that day. */
+export function votacaoHref(v: { id: string; casa: string; data?: string }, query?: Query): string {
+  const data = v.casa === "senado" && v.data ? v.data.slice(0, 10) : undefined;
+  return routeHref("votacoes", v.id, { ...query, data });
+}
+
+export function navigate(view: View, param?: string, query?: Query) {
+  router.go(view, param, query);
 }
 
 export function useRoute(): Route {
-  const hash = useSyncExternalStore(subscribe, currentHash, () => "");
-  return parseRoute(hash);
+  const hash = useSyncExternalStore(router.subscribe, router.hash, () => "");
+  return useMemo(() => parseRoute(hash), [hash]);
+}
+
+/** A string filter stored in the URL; the fallback value is left out of it. */
+export function useQueryParam(key: string, fallback = ""): [string, (v: string | null) => void] {
+  const { query } = useRoute();
+  const valor = query.get(key) ?? fallback;
+  const definir = useCallback(
+    (v: string | null) => router.patch({ [key]: v === fallback ? null : v }),
+    [key, fallback]
+  );
+  return [valor, definir];
+}
+
+/** Like useQueryParam, restricted to a closed set of values. */
+export function useQueryEnum<T extends string>(key: string, opcoes: readonly T[], fallback: T): [T, (v: T) => void] {
+  const [raw, definir] = useQueryParam(key, fallback);
+  const valor = (opcoes as readonly string[]).includes(raw) ? (raw as T) : fallback;
+  return [valor, definir];
 }
