@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ParlamentarDetail } from "@/components/detail/ParlamentarDetail";
 import { HudHeader } from "@/components/hud/HudHeader";
 import { SearchDialog } from "@/components/hud/SearchDialog";
+import { useRestauraRolagem } from "@/hooks/useRestauraRolagem";
 import { useSearchHotkey } from "@/hooks/useSearchHotkey";
 import { useRoute } from "@/hooks/useUi";
 import type { Parlamentar } from "@/lib/types";
@@ -30,12 +31,13 @@ function Hud() {
   const [membro, setMembro] = useState<Parlamentar | null>(null);
   const abrirBusca = useCallback(() => setBusca(true), []);
   useSearchHotkey(abrirBusca);
+  useRestauraRolagem(`${route.view}/${route.param ?? ""}`);
 
   return (
     <div className="hud">
       <HudHeader view={route.view} onSearch={abrirBusca} />
-      {route.view === "votacoes" && <VotacoesView votacaoId={route.param} onSelectMember={setMembro} />}
-      {route.view === "inspecionar" && <InspecaoView votacaoId={route.param} onSelectMember={setMembro} />}
+      {route.view === "votacoes" && <VotacoesView key={route.param ?? "recente"} votacaoId={route.param} onSelectMember={setMembro} />}
+      {route.view === "inspecionar" && <InspecaoView key={route.param} votacaoId={route.param} onSelectMember={setMembro} />}
       {route.view === "lista" && <ListaView />}
       {route.view === "camara" && <CasaView key="camara" casa="camara" onSelectMember={setMembro} />}
       {route.view === "senado" && <CasaView key="senado" casa="senado" onSelectMember={setMembro} />}
