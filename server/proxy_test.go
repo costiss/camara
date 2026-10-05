@@ -75,7 +75,7 @@ func newFixture(t *testing.T, opt options) *fixture {
 		t.Fatal(err)
 	}
 	cache := NewMemoryCache(64<<20, 24*time.Hour, f.clock.Now)
-	clients := NewClientLimiter(opt.clientRPS, opt.clientBurst, false, f.clock.Now)
+	clients := NewClientLimiter(opt.clientRPS, opt.clientBurst, NewClientIPResolver(nil, false), f.clock.Now)
 	f.proxy = NewProxy([]*Upstream{up}, cache, clients, 2*time.Second, f.clock.Now)
 	f.handler = NewCORS([]string{"*"}, f.proxy)
 	return f

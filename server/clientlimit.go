@@ -1,9 +1,7 @@
 package main
 
 import (
-	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,27 +16,27 @@ type visitor struct {
 // ClientLimiter gives each client IP its own token bucket so one visitor
 // cannot exhaust the shared upstream budget for everyone else.
 type ClientLimiter struct {
-	mu             sync.Mutex
-	rps            rate.Limit
-	burst          int
-	trustForwarded bool
-	visitors       map[string]*visitor
-	now            func() time.Time
+	mu       sync.Mutex
+	rps      rate.Limit
+	burst    int
+	ips      *ClientIPResolver
+	visitors map[string]*visitor
+	now      func() time.Time
 }
 
-func NewClientLimiter(rps float64, burst int, trustForwarded bool, now func() time.Time) *ClientLimiter {
+func NewClientLimiter(rps float64, burst int, ips *ClientIPResolver, now func() time.Time) *ClientLimiter {
 	return &ClientLimiter{
-		rps:            rate.Limit(rps),
-		burst:          burst,
-		trustForwarded: trustForwarded,
-		visitors:       make(map[string]*visitor),
-		now:            now,
+		rps:      rate.Limit(rps),
+		burst:    burst,
+		ips:      ips,
+		visitors: make(map[string]*visitor),
+		now:      now,
 	}
 }
 
 // Allow spends one token for the request's client; when empty it reports how long to wait.
 func (c *ClientLimiter) Allow(r *http.Request) (bool, time.Duration) {
-	key := c.clientKey(r)
+	key := c.ips.Resolve(r)
 	now := c.now()
 	c.mu.Lock()
 	v, ok := c.visitors[key]
@@ -67,17 +65,4 @@ func (c *ClientLimiter) Sweep(idle time.Duration) {
 			delete(c.visitors, k)
 		}
 	}
-}
-
-func (c *ClientLimiter) clientKey(r *http.Request) string {
-	if c.trustForwarded {
-		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-			return strings.TrimSpace(strings.Split(fwd, ",")[0])
-		}
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -25,7 +26,9 @@ type Config struct {
 	UpstreamTimeout time.Duration
 	ClientRPS       float64
 	ClientBurst     int
-	TrustForwarded  bool
+	TrustedProxies  []netip.Prefix
+	TrustCloudflare bool
+	StaticDir       string
 	Camara          UpstreamConfig
 	Senado          UpstreamConfig
 }
@@ -34,15 +37,16 @@ type Config struct {
 func LoadConfig() (Config, error) {
 	env := envReader{}
 	cfg := Config{
-		Addr:            env.str("PROXY_ADDR", ":8080"),
-		AllowedOrigins:  env.list("PROXY_ALLOWED_ORIGINS", "*"),
+		Addr:            env.str("PROXY_ADDR", ":"+env.str("PORT", "8080")),
+		AllowedOrigins:  env.list("PROXY_ALLOWED_ORIGINS", ""),
 		CacheMaxBytes:   int64(env.int("PROXY_CACHE_MAX_MB", 256)) << 20,
 		StaleMax:        env.duration("PROXY_STALE_MAX", 24*time.Hour),
 		QueueTimeout:    env.duration("PROXY_QUEUE_TIMEOUT", 15*time.Second),
 		UpstreamTimeout: env.duration("PROXY_UPSTREAM_TIMEOUT", 20*time.Second),
 		ClientRPS:       env.float("PROXY_CLIENT_RPS", 20),
 		ClientBurst:     env.int("PROXY_CLIENT_BURST", 120),
-		TrustForwarded:  env.bool("PROXY_TRUST_FORWARDED", false),
+		TrustCloudflare: env.bool("PROXY_TRUST_CLOUDFLARE", true),
+		StaticDir:       env.str("STATIC_DIR", ""),
 		Camara: UpstreamConfig{
 			Base:          env.str("CAMARA_BASE", "https://dadosabertos.camara.leg.br/api/v2"),
 			RPS:           env.float("CAMARA_RPS", 5),
@@ -56,6 +60,11 @@ func LoadConfig() (Config, error) {
 			MaxConcurrent: env.int("SENADO_MAX_CONCURRENT", 2),
 		},
 	}
+	trusted, err := parsePrefixes(env.list("PROXY_TRUSTED_PROXIES", defaultTrustedProxies))
+	if err != nil {
+		env.fail("PROXY_TRUSTED_PROXIES", "", err)
+	}
+	cfg.TrustedProxies = trusted
 	return cfg, env.err
 }
 

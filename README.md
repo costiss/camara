@@ -108,10 +108,11 @@ src/
 └── lib/            api adapters, vote semantics, breakdowns, geo shapes
 ```
 
-## API proxy (`server/`)
+## Server (`server/`) and deployment
 
-A small Go service sits between the app and the government APIs so traffic
-does not multiply with every visitor:
+One small Go binary serves the built app and proxies the government APIs on
+the same origin (`/api/camara/*`, `/api/senado/*`), so the app works on any
+domain without CORS or a rebuild.
 
 - **Shared cache** in memory, per path: a recorded roll-call or vote detail
   6 h, deputies 6 h, propositions 1 h, vote lists 5 min, events 10 min.
@@ -122,30 +123,46 @@ does not multiply with every visitor:
 - **Global rate limit per API** (token bucket + concurrency cap): Câmara
   5 req/s, Senado 2 req/s by default. A 429/503 with `Retry-After` pauses all
   calls to that API.
-- **Per-client limit** (20 req/s, burst 120 per IP) so one visitor cannot use
-  up the shared budget.
-- Only `GET /api/camara/*` and `GET /api/senado/*` are proxied (fixed hosts,
-  path allowlist); CORS headers are added by the proxy.
+- **Per-visitor limit** (20 req/s, burst 120). The visitor's IP is resolved
+  behind Cloudflare and a reverse proxy: `X-Forwarded-For` is walked only
+  through trusted hops (private networks, Cloudflare ranges) and
+  `CF-Connecting-IP` is used only when the request really came from a
+  Cloudflare edge, so neither header can be forged by hitting the server directly.
+- **Static app**: hashed `/assets/*` cached for a year, `index.html` revalidated,
+  unknown paths fall back to `index.html`, no redirects (so nothing depends on
+  the host name the reverse proxy forwards).
 
 ```bash
-npm run dev:api        # proxy on :8080 (needs Go 1.24)
-npm run dev            # Vite forwards /api to it (.env.development sets VITE_API_PROXY=/api)
-curl localhost:8080/healthz   # cache size, hits, misses, stale, rejected
+docker build -t camara .
+docker run -p 8080:8080 camara        # app + /api on http://localhost:8080, /healthz for stats
+
+npm run dev:api                       # local development: Go server on :8080
+npm run dev                           # Vite on :5173, forwards /api to it
 ```
 
-Production: build the app with `VITE_API_PROXY=/api` (same origin, behind a
-reverse proxy) or the proxy's full URL, and run the container
-(`docker build -t congresso-proxy server/`). Without `VITE_API_PROXY` the
-app calls the APIs directly.
+### Dokploy behind Cloudflare
+
+1. Create an application from this repository with build type **Dockerfile**
+   (`./Dockerfile`); the container listens on `8080` (or `$PORT`).
+2. Add the domain in Dokploy pointing to container port `8080`; enable HTTPS.
+3. In Cloudflare, proxy the DNS record (orange cloud) and use SSL mode
+   **Full (strict)**.
+
+No other setting is needed: Traefik's Docker network and Cloudflare's edges are
+trusted by default. Run a single replica (the cache is in memory). Optionally,
+a Cloudflare Cache Rule for `/api/*` that respects origin `Cache-Control`
+moves repeated reads to Cloudflare's edge.
 
 | Variable | Default |
 | --- | --- |
-| `PROXY_ADDR` | `:8080` |
-| `PROXY_ALLOWED_ORIGINS` | `*` (comma-separated list to restrict) |
+| `PORT` / `PROXY_ADDR` | `8080` / `:$PORT` |
+| `STATIC_DIR` | empty (the Docker image sets `/web`) |
+| `PROXY_ALLOWED_ORIGINS` | empty: same origin only; list origins to open the API to other sites |
+| `PROXY_TRUSTED_PROXIES` | private ranges (`10/8`, `172.16/12`, `192.168/16`, loopback, `fc00::/7`) |
+| `PROXY_TRUST_CLOUDFLARE` | `true` |
 | `PROXY_CACHE_MAX_MB` / `PROXY_STALE_MAX` | `256` / `24h` |
 | `PROXY_QUEUE_TIMEOUT` / `PROXY_UPSTREAM_TIMEOUT` | `15s` / `20s` |
 | `PROXY_CLIENT_RPS` / `PROXY_CLIENT_BURST` | `20` / `120` |
-| `PROXY_TRUST_FORWARDED` | `false` (set behind a reverse proxy to read `X-Forwarded-For`) |
 | `CAMARA_RPS` / `CAMARA_BURST` / `CAMARA_MAX_CONCURRENT` | `5` / `10` / `4` |
 | `SENADO_RPS` / `SENADO_BURST` / `SENADO_MAX_CONCURRENT` | `2` / `4` / `2` |
 
