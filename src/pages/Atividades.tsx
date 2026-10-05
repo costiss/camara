@@ -7,6 +7,7 @@ import {
   useVotacoes,
 } from "@/hooks/useCamara";
 import { useSenadoVotacoes } from "@/hooks/useSenado";
+import { navigate } from "@/hooks/useUi";
 import {
   EmptyState,
   ErrorState,
@@ -17,7 +18,6 @@ import {
   VotacaoRow,
 } from "@/components/shared";
 import { ProposicaoDetail } from "@/components/detail/ProposicaoDetail";
-import { VotacaoDetail } from "@/components/detail/VotacaoDetail";
 import { addDays, isoDate, startOfDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Evento, Proposicao, Votacao } from "@/lib/types";
@@ -33,7 +33,6 @@ export function Atividades() {
   const hoje = startOfDay();
   const [tipo, setTipo] = useState<Tipo>("tudo");
   const [selectedPec, setSelectedPec] = useState<Proposicao | null>(null);
-  const [selectedVotacao, setSelectedVotacao] = useState<Votacao | null>(null);
 
   const votacoesQ = useVotacoes({
     dataInicio: isoDate(addDays(hoje, -90)),
@@ -178,7 +177,7 @@ export function Atividades() {
               <VotacaoRow
                 key={`v-${item.votacao.id}-${i}`}
                 v={item.votacao}
-                onOpen={setSelectedVotacao}
+                onOpen={() => navigate(`votacao/${item.votacao.id}`)}
               />
             ) : item.kind === "proposicao" ? (
               <ProposicaoRow
@@ -197,11 +196,6 @@ export function Atividades() {
         proposicao={selectedPec}
         open={!!selectedPec}
         onOpenChange={(o) => !o && setSelectedPec(null)}
-      />
-      <VotacaoDetail
-        votacao={selectedVotacao}
-        open={!!selectedVotacao}
-        onOpenChange={(o) => !o && setSelectedVotacao(null)}
       />
     </div>
   );

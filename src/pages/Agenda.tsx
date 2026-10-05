@@ -6,6 +6,7 @@ import {
   useVotacoes,
 } from "@/hooks/useCamara";
 import { useSenadoVotacoes } from "@/hooks/useSenado";
+import { navigate } from "@/hooks/useUi";
 import {
   EmptyState,
   ErrorState,
@@ -15,17 +16,15 @@ import {
   StatusBadge,
   VotacaoRow,
 } from "@/components/shared";
-import { VotacaoDetail } from "@/components/detail/VotacaoDetail";
 import { addDays, isoDate, startOfDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { Evento, Votacao } from "@/lib/types";
+import type { Evento } from "@/lib/types";
 
 type Aba = "agenda" | "votacoes" | "senado";
 
 export function Agenda() {
   const hoje = startOfDay();
   const [aba, setAba] = useState<Aba>("agenda");
-  const [selected, setSelected] = useState<Votacao | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const eventosQ = useEventos({
@@ -141,7 +140,11 @@ export function Agenda() {
             <EmptyState icon={Gavel} title="Sem votações nos últimos 30 dias" />
           ) : (
             votacoes.map((v) => (
-              <VotacaoRow key={v.id} v={v} onOpen={setSelected} />
+              <VotacaoRow
+                key={v.id}
+                v={v}
+                onOpen={() => navigate(`votacao/${v.id}`)}
+              />
             ))
           )}
         </div>
@@ -157,17 +160,15 @@ export function Agenda() {
             <EmptyState icon={Landmark} title="Sem votações recentes no Senado" />
           ) : (
             senadoVotos.map((v) => (
-              <VotacaoRow key={v.id} v={v} onOpen={setSelected} />
+              <VotacaoRow
+                key={v.id}
+                v={v}
+                onOpen={() => navigate(`votacao/${v.id}`)}
+              />
             ))
           )}
         </div>
       )}
-
-      <VotacaoDetail
-        votacao={selected}
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelected(null)}
-      />
     </div>
   );
 }

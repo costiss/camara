@@ -117,6 +117,10 @@ interface RawVotacao {
   aprovacao: number | null;
 }
 
+interface RawVotacaoDetalhe extends RawVotacao {
+  objetosPossiveis?: RawProposicao[];
+}
+
 interface RawVoto {
   tipoVoto: string;
   deputado_: {
@@ -248,6 +252,18 @@ function mapVotacao(v: RawVotacao): Votacao {
   };
 }
 
+function mapVotacaoDetalhe(v: RawVotacaoDetalhe): Votacao {
+  return {
+    ...mapVotacao(v),
+    objetos: (v.objetosPossiveis ?? []).map((o) => ({
+      id: String(o.id),
+      sigla: `${o.siglaTipo} ${o.numero}/${o.ano}`,
+      ementa: o.ementa,
+      url: `https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=${o.id}`,
+    })),
+  };
+}
+
 function mapEvento(e: RawEvento): Evento {
   return {
     id: `camara-${e.id}`,
@@ -365,6 +381,13 @@ export async function getProposicaoVotacoes(
     `${BASE}/proposicoes/${id}/votacoes`
   );
   return (dados ?? []).map(mapVotacao);
+}
+
+export async function getVotacao(id: string): Promise<Votacao> {
+  const { dados } = await getApi<{ dados: RawVotacaoDetalhe }>(
+    `${BASE}/votacoes/${id}`
+  );
+  return mapVotacaoDetalhe(dados);
 }
 
 export async function getVotacoes(q: {

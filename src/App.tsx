@@ -5,6 +5,7 @@ import { useRoute } from "@/hooks/useUi";
 import { Dashboard } from "@/pages/Dashboard";
 import { Pecs } from "@/pages/Pecs";
 import { Agenda } from "@/pages/Agenda";
+import { Votacao } from "@/pages/Votacao";
 import { Deputados } from "@/pages/Deputados";
 import { Senadores } from "@/pages/Senadores";
 import { Atividades } from "@/pages/Atividades";
@@ -67,13 +68,24 @@ const PAGES: Record<string, PageMeta> = {
 
 function App() {
   const route = useRoute();
-  const page = PAGES[route] ?? PAGES.dashboard;
+  const [base, ...rest] = route.split("/");
+  const isVotacao = base === "votacao" && rest.length > 0;
+  const page = PAGES[base] ?? PAGES.dashboard;
+
+  const title = isVotacao ? "Votação" : page.title;
+  const subtitle = isVotacao
+    ? "Resultado, gráficos e votação nominal"
+    : page.subtitle;
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={200}>
-        <AppShell title={page.title} subtitle={page.subtitle}>
-          {page.render()}
+        <AppShell title={title} subtitle={subtitle}>
+          {isVotacao ? (
+            <Votacao id={decodeURIComponent(rest.join("/"))} />
+          ) : (
+            page.render()
+          )}
         </AppShell>
       </TooltipProvider>
     </QueryClientProvider>

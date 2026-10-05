@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 import {
   CalendarClock,
+  ChevronRight,
   FileText,
   Gavel,
   Landmark,
@@ -16,6 +18,9 @@ import {
   useVotacoesMensais,
 } from "@/hooks/useCamara";
 import { useSenadoVotacoes, useSenadores } from "@/hooks/useSenado";
+import { navigate } from "@/hooks/useUi";
+import { getVotacaoVotos } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -27,6 +32,7 @@ import {
   Donut,
   EmptyState,
   EventoAgendaCard,
+  Hemicycle,
   KpiCard,
   LoadingRows,
   ProposicoesList,
@@ -35,11 +41,10 @@ import {
   VotacaoRow,
 } from "@/components/shared";
 import { ProposicaoDetail } from "@/components/detail/ProposicaoDetail";
-import { VotacaoDetail } from "@/components/detail/VotacaoDetail";
 import { distributionBy } from "@/lib/aggregate";
 import { partyColor } from "@/lib/parties";
 import { addDays, formatMonth, isoDate, startOfDay } from "@/lib/format";
-import type { Proposicao, Votacao } from "@/lib/types";
+import type { Proposicao } from "@/lib/types";
 
 export function Dashboard() {
   const hoje = startOfDay();
@@ -48,7 +53,6 @@ export function Dashboard() {
   const anoAtual = hoje.getFullYear();
 
   const [selectedPec, setSelectedPec] = useState<Proposicao | null>(null);
-  const [selectedVotacao, setSelectedVotacao] = useState<Votacao | null>(null);
 
   const deputadosQ = useDeputados();
   const senadoresQ = useSenadores();
@@ -106,6 +110,21 @@ export function Dashboard() {
     [pecsRecentesQ.data]
   );
   const votacoes = useMemo(() => votacoesQ.data?.items ?? [], [votacoesQ.data]);
+
+  // Pick the most recent plenary vote that actually has a published roll-call.
+  const votosCandidatos = useQueries({
+    queries: votacoes.slice(0, 3).map((v) => ({
+      queryKey: ["votacao-votos", v.id.replace(/^camara-/, "")],
+      queryFn: () => getVotacaoVotos(v.id.replace(/^camara-/, "")),
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+  const hemiIndex = votosCandidatos.findIndex(
+    (q) => (q.data?.length ?? 0) > 0
+  );
+  const hemiVotos =
+    hemiIndex >= 0 ? votosCandidatos[hemiIndex].data ?? [] : [];
+  const hemiVotacao = hemiIndex >= 0 ? votacoes[hemiIndex] : undefined;
 
   const distribuicaoDep = useMemo(
     () => distributionBy(deputados, (d) => d.partido, 8),
@@ -203,7 +222,11 @@ export function Dashboard() {
               <EmptyState title="Sem votações no período" icon={Gavel} />
             ) : (
               feed.map((v) => (
-                <VotacaoRow key={v.id} v={v} onOpen={setSelectedVotacao} />
+                <VotacaoRow
+                  key={v.id}
+                  v={v}
+                  onOpen={() => navigate(`votacao/${v.id}`)}
+                />
               ))
             )}
           </CardContent>
@@ -289,6 +312,34 @@ export function Dashboard() {
         </Card>
       </div>
 
+      {/* Plenário — última votação */}
+      {hemiVotacao && hemiVotos.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Gavel className="h-4 w-4 text-accent" />
+                Plenário — última votação
+              </CardTitle>
+              <p className="mt-0.5 line-clamp-1 max-w-3xl text-[11px] text-fg-4">
+                {hemiVotacao.descricao}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate(`votacao/${hemiVotacao.id}`)}
+            >
+              Ver votação
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Hemicycle votos={hemiVotos} colorBy="voto" />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tendências */}
       <div>
         <SectionHeader
@@ -344,11 +395,6 @@ export function Dashboard() {
         proposicao={selectedPec}
         open={!!selectedPec}
         onOpenChange={(o) => !o && setSelectedPec(null)}
-      />
-      <VotacaoDetail
-        votacao={selectedVotacao}
-        open={!!selectedVotacao}
-        onOpenChange={(o) => !o && setSelectedVotacao(null)}
       />
     </div>
   );

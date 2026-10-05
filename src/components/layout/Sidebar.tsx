@@ -48,6 +48,7 @@ function Brand() {
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const route = useRoute();
+  const base = route.split("/")[0];
 
   const go = (id: string) => {
     navigate(id);
@@ -62,7 +63,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
         {NAV_ITEMS.map((item) => {
-          const active = route === item.id;
+          const active = base === item.id;
           const Icon = item.icon;
           return (
             <button

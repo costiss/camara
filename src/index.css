@@ -366,6 +366,16 @@ p {
     border-color: var(--color-accent);
     box-shadow: 0 0 0 4px var(--color-accent-dim);
   }
+
+  /* Parliament hemicycle seats */
+  .seat {
+    cursor: pointer;
+    transition: opacity 0.12s var(--ease);
+  }
+  .seat:hover {
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 1.4;
+  }
 }
 
 @layer utilities {

@@ -13,6 +13,7 @@ import {
   getProposicoes,
   getProposicoesPorAutor,
   getTramitacoes,
+  getVotacao,
   getVotacaoVotos,
   getVotacoes,
   type ProposicoesQuery,
@@ -128,6 +129,15 @@ export function useVotacaoVotos(id?: string) {
   return useQuery({
     queryKey: ["votacao-votos", id],
     queryFn: () => getVotacaoVotos(id as string),
+    enabled: !!id,
+    staleTime: STALE,
+  });
+}
+
+export function useVotacao(id?: string) {
+  return useQuery({
+    queryKey: ["votacao", id],
+    queryFn: () => getVotacao(id as string),
     enabled: !!id,
     staleTime: STALE,
   });

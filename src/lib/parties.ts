@@ -111,3 +111,39 @@ export function votacaoTone(aprovacao?: number | null): StatusTone {
   if (aprovacao === 0) return "danger";
   return "neutral";
 }
+
+/* ------------------------------- votes -------------------------------- */
+
+export const VOTO_ORDER = [
+  "Sim",
+  "Não",
+  "Abstenção",
+  "Obstrução",
+  "Art. 17",
+] as const;
+
+const VOTO_COLORS: Record<string, string> = {
+  Sim: "#4ade80",
+  "Não": "#f87171",
+  Abstenção: "#85827c",
+  Obstrução: "#fbbf24",
+  "Art. 17": "#60a5fa",
+};
+
+export function voteColor(voto: string): string {
+  return VOTO_COLORS[voto] ?? "#7dd3fc";
+}
+
+export function voteRank(voto: string): number {
+  const i = (VOTO_ORDER as readonly string[]).indexOf(voto);
+  return i === -1 ? 99 : i;
+}
+
+export function voteTone(voto: string): StatusTone {
+  const v = voto.toLowerCase();
+  if (v.startsWith("sim")) return "success";
+  if (v.startsWith("não") || v.startsWith("nao")) return "danger";
+  if (v.startsWith("obstr")) return "warning";
+  if (v.startsWith("art")) return "info";
+  return "neutral";
+}

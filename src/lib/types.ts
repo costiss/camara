@@ -80,6 +80,13 @@ export interface Placar {
   total: number;
 }
 
+export interface VotacaoObjeto {
+  id: string;
+  sigla: string;
+  ementa: string;
+  url?: string;
+}
+
 export interface Votacao {
   id: string;
   casa: Casa;
@@ -93,6 +100,8 @@ export interface Votacao {
   placar?: Placar | null;
   proposicao?: string;
   url?: string;
+  /** Propositions that could be the object of the vote (Câmara detail). */
+  objetos?: VotacaoObjeto[];
   /** Individual votes (loaded on demand). */
   votos?: VotoParlamentar[];
 }

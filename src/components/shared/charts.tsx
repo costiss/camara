@@ -283,6 +283,66 @@ export function TrendArea({
 
 /* ------------------------------- Bars chart ----------------------------- */
 
+export function StackedPartyBars({
+  rows,
+  keys,
+  colorFor,
+  heightPer = 26,
+  labelWidth = 92,
+  className,
+}: {
+  rows: Array<Record<string, string | number>>;
+  keys: string[];
+  colorFor: (key: string) => string;
+  heightPer?: number;
+  labelWidth?: number;
+  className?: string;
+}) {
+  const height = Math.max(140, rows.length * heightPer + 24);
+  return (
+    <div className={className} style={{ width: "100%", height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={rows}
+          layout="vertical"
+          margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+          barCategoryGap={3}
+        >
+          <XAxis type="number" hide />
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={labelWidth}
+            tick={{ fill: "var(--color-fg-3)", fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip
+            cursor={{ fill: "rgba(250,250,249,0.04)" }}
+            content={(props) => (
+              <ChartTooltip
+                active={props.active}
+                label={props.label as string | number | undefined}
+                payload={props.payload as unknown as ChartPayload[]}
+              />
+            )}
+          />
+          {keys.map((k, i) => (
+            <Bar
+              key={k}
+              dataKey={k}
+              stackId="a"
+              fill={colorFor(k)}
+              maxBarSize={16}
+              radius={i === keys.length - 1 ? [0, 3, 3, 0] : 0}
+            />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export function HorizontalBars({
   items,
   color = "#60a5fa",

@@ -23,6 +23,10 @@ surfaces, hairline borders, big serif figures, tabular numbers, restrained colou
   filters, full-text search and pagination.
 - **Agenda & votações** — upcoming Câmara sessions with their **pauta**
   (agenda items), recent Câmara votes and recent Senate nominal votes.
+- **Votação — página dedicada** (`#/votacao/<id>`) — each vote gets its own page
+  with a **parliament hemicycle** (every seat is one vote, recolorable by vote or
+  by party, hover for the member's name), vote distribution, how each party
+  voted, and the full roll-call with names, party and state.
 - **Deputados / Senadores** — search, party/state filters, bancada overview and
   per-member detail (profile, recent propositions or votes).
 - **Atividades** — a unified activity feed (votes, propositions, sessions)
@@ -36,7 +40,6 @@ Detail sheets expose the legislative history:
   situation and authorship (Senado).
 - **Parlamentar** — profile plus recent authored propositions (deputy) or
   nominal votes (senator).
-- **Votação** — result, scoreboard and the individual roll-call, grouped by vote.
 
 ## Data sources
 
@@ -70,7 +73,7 @@ src/
 ```
 
 Navigation uses a dependency-free hash router (`src/hooks/useUi.ts`), so deep
-links work (`#/pecs`, `#/agenda`, …).
+links work (`#/pecs`, `#/agenda`, `#/votacao/camara-2611313-31`, …).
 
 ## Getting started
 
