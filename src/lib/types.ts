@@ -52,6 +52,8 @@ export interface Proposicao {
   tramitando?: boolean;
   /** True when this proposition already has a recorded vote. */
   votado?: boolean;
+  /** Date of the recorded vote (when known). */
+  votacaoData?: string;
   url?: string;
   inteiroTeor?: string;
 }

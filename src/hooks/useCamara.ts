@@ -8,6 +8,7 @@ import {
   getEventoPauta,
   getEventos,
   getPartidos,
+  getPecsVotadasNoAno,
   getProposicao,
   getProposicaoVotacoes,
   getProposicoes,
@@ -119,6 +120,16 @@ export function useProposicoesVotadas(ids: string[], enabled = true) {
     map,
     isLoading: enabled && queries.some((q) => q.isLoading),
   };
+}
+
+/** PECs whose merit was voted on the Câmara floor during `ano`. */
+export function usePecsVotadasNoAno(ano: number, enabled = true) {
+  return useQuery({
+    queryKey: ["pecs-votadas-ano", ano],
+    queryFn: () => getPecsVotadasNoAno(ano),
+    enabled,
+    staleTime: 30 * 60 * 1000,
+  });
 }
 
 export function useProposicoesPorAutor(id?: number | string) {

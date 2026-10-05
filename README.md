@@ -38,8 +38,11 @@ surfaces, hairline borders, big serif figures, tabular numbers, restrained colou
 
 Every list of legislative items can be narrowed to what has already been voted:
 
-- **PECs** — `Todas / Já votadas / Ainda não votadas`, with a "Já votada" badge
-  (Câmara via `/proposicoes/{id}/votacoes`; Senado via situation text).
+- **PECs** — two modes: **Apresentadas** (by the year the PEC was tabled) with a
+  `Todas / Já votadas / Ainda não votadas` filter, and **Votadas em {ano}**,
+  which lists the PECs whose *merit* was voted on the Câmara floor that year —
+  even if they were tabled years earlier (the year selector becomes the voting
+  year). Procedural votes (requerimentos, interstícios) are ignored.
 - **Agenda** — sessions split into `Próximas / Já realizadas`, and each session's
   pauta can be filtered to `Já votados`.
 - **Atividades** — a `Já votados` toggle keeps only votes and deliberated

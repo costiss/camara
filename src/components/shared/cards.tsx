@@ -62,6 +62,12 @@ export function ProposicaoRow({
               {formatDate(p.apresentacao)}
             </span>
           )}
+          {p.votacaoData && (
+            <span className="flex items-center gap-1 text-green">
+              <Gavel className="h-3 w-3" />
+              Votada em {formatDate(p.votacaoData)}
+            </span>
+          )}
           {p.orgao && <span>{p.orgao}</span>}
           {p.autor && <span className="max-w-[280px] truncate">{p.autor}</span>}
         </div>

@@ -485,3 +485,125 @@ export async function getProposicoesPorAutor(
   const { dados } = await getApi<{ dados: RawProposicao[] }>(url.toString());
   return (dados ?? []).map(mapProposicao);
 }
+
+/* ---------------- PECs voted in a given year (Câmara floor) ------------- */
+
+/** Split a year into the ≤3-month windows the `votacoes` API requires. */
+function periodosDoAno(ano: number): { ini: string; fim: string }[] {
+  const hoje = new Date().toISOString().slice(0, 10);
+  return [
+    { ini: `${ano}-01-01`, fim: `${ano}-03-31` },
+    { ini: `${ano}-04-01`, fim: `${ano}-06-30` },
+    { ini: `${ano}-07-01`, fim: `${ano}-09-30` },
+    { ini: `${ano}-10-01`, fim: `${ano}-12-31` },
+  ]
+    .map((w) => ({ ini: w.ini, fim: w.fim > hoje ? hoje : w.fim }))
+    .filter((w) => w.ini <= hoje && w.ini <= w.fim);
+}
+
+const PEC_DESC_RE =
+  /Proposta de Emenda (?:à|a) Constitui[çc][ãa]o\s*n?[º°o]?\s*(\d+)\s*,?\s*(?:de\s*)?(\d{4})/i;
+
+/**
+ * Reads a plenary vote description and returns the PEC whose *merit* was
+ * voted, or null for procedural votes (requerimentos, interstícios…).
+ */
+function parsePecMerito(descricao: string): { numero: number; ano: number } | null {
+  const m = PEC_DESC_RE.exec(descricao);
+  if (!m) return null;
+  const d = descricao.toLowerCase();
+  if (/^\s*(aprovad|rejeitad)[ao]?\s+o\s+requerimento/.test(d)) return null;
+  if (
+    d.includes("desmembramento") ||
+    d.includes("inclusão da proposta") ||
+    d.includes("inclusao da proposta") ||
+    d.includes("dispensa de interstício") ||
+    d.includes("dispensa de intersticio") ||
+    d.includes("quebra de interstício") ||
+    d.includes("quebra de intersticio")
+  ) {
+    return null;
+  }
+  return { numero: Number(m[1]), ano: Number(m[2]) };
+}
+
+/**
+ * PECs whose merit was voted on the Câmara floor during `ano`, regardless
+ * of the year they were presented. Walks the year's plenary votes,
+ * extracts PEC references from the vote descriptions and resolves each
+ * one back to its proposition.
+ */
+export async function getPecsVotadasNoAno(ano: number): Promise<Proposicao[]> {
+  interface Ref {
+    numero: number;
+    ano: number;
+    data: string;
+    aprovacao: number | null;
+    count: number;
+  }
+  const refs = new Map<string, Ref>();
+
+  for (const w of periodosDoAno(ano)) {
+    for (let pagina = 1; pagina <= 60; pagina += 1) {
+      let page: { dados: RawVotacao[] };
+      try {
+        page = await getApiPaged<RawVotacao>(
+          `${BASE}/votacoes?dataInicio=${w.ini}&dataFim=${w.fim}&idOrgao=180&itens=100&pagina=${pagina}`
+        );
+      } catch {
+        break; // skip a failing window rather than fail the whole apuração
+      }
+      if (page.dados.length === 0) break;
+      for (const v of page.dados) {
+        const parsed = parsePecMerito(v.descricao ?? "");
+        if (!parsed) continue;
+        const key = `${parsed.ano}-${parsed.numero}`;
+        const cur = refs.get(key);
+        if (cur) {
+          cur.count += 1;
+          if (v.data && v.data < cur.data) cur.data = v.data;
+        } else {
+          refs.set(key, {
+            numero: parsed.numero,
+            ano: parsed.ano,
+            data: v.data,
+            aprovacao: v.aprovacao,
+            count: 1,
+          });
+        }
+      }
+      if (page.dados.length < 100) break;
+    }
+  }
+
+  const result: Proposicao[] = [];
+  for (const ref of refs.values()) {
+    let raw: RawProposicao | undefined;
+    try {
+      const { dados } = await getApi<{ dados: RawProposicao[] }>(
+        `${BASE}/proposicoes?siglaTipo=PEC&ano=${ref.ano}&numero=${ref.numero}`
+      );
+      raw = (dados ?? []).find((x) => x.numero === ref.numero) ?? dados?.[0];
+    } catch {
+      raw = undefined;
+    }
+    if (!raw) continue;
+    const base = mapProposicao(raw);
+    result.push({
+      ...base,
+      votado: true,
+      votacaoData: ref.data,
+      status:
+        ref.aprovacao === 1
+          ? "Aprovada no Plenário"
+          : ref.aprovacao === 0
+            ? "Rejeitada no Plenário"
+            : base.status,
+      despacho: `${ref.count} votaç${ref.count === 1 ? "ão" : "ões"} de mérito em ${ano}`,
+    });
+  }
+
+  return result.sort((a, b) =>
+    (b.votacaoData ?? "").localeCompare(a.votacaoData ?? "")
+  );
+}
