@@ -5,6 +5,7 @@
 import type {
   Autor,
   Evento,
+  OrientacaoBancada,
   Parlamentar,
   Partido,
   Placar,
@@ -13,6 +14,7 @@ import type {
   Votacao,
   VotoParlamentar,
 } from "../types";
+import { VotoClassifier } from "../votos";
 import { createLimiter, getJson, getPaged, hasRel, type PagedResult } from "./http";
 
 const BASE = "https://dadosabertos.camara.leg.br/api/v2";
@@ -119,6 +121,13 @@ interface RawVotacao {
 
 interface RawVotacaoDetalhe extends RawVotacao {
   objetosPossiveis?: RawProposicao[];
+  proposicoesAfetadas?: RawProposicao[];
+}
+
+interface RawOrientacao {
+  orientacaoVoto: string;
+  codTipoLideranca: string;
+  siglaPartidoBloco: string;
 }
 
 interface RawVoto {
@@ -238,26 +247,48 @@ function mapTramitacao(t: RawTramitacao): Tramitacao {
   };
 }
 
+export const PLENARIO_CAMARA = 180;
+
+/** Câmara vote ids are `{idProposicao}-{sequência}`. */
+export function proposicaoIdDaVotacao(votacaoId: string): string {
+  return votacaoId.replace(/^camara-/, "").split("-")[0];
+}
+
 function mapVotacao(v: RawVotacao): Votacao {
+  const placar = parsePlacar(v.descricao ?? "");
   return {
     id: `camara-${v.id}`,
     casa: "camara",
     data: v.data,
     dataHora: v.dataHoraRegistro,
     orgao: v.siglaOrgao,
-    descricao: v.descricao,
+    plenario: v.siglaOrgao === "PLEN",
+    descricao: v.descricao ?? "",
     aprovacao: v.aprovacao,
-    placar: parsePlacar(v.descricao),
-    url: v.uri,
+    placar,
+    nominal: placar !== null,
+    proposicaoId: proposicaoIdDaVotacao(v.id),
+    url: `https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=${proposicaoIdDaVotacao(v.id)}`,
   };
 }
 
+const siglaDe = (o: RawProposicao) => `${o.siglaTipo} ${o.numero}/${o.ano}`;
+
 function mapVotacaoDetalhe(v: RawVotacaoDetalhe): Votacao {
+  const base = mapVotacao(v);
+  const afetadas = v.proposicoesAfetadas?.length
+    ? v.proposicoesAfetadas
+    : (v.objetosPossiveis ?? []);
+  const principal =
+    afetadas.find((o) => String(o.id) === base.proposicaoId) ?? afetadas[0];
   return {
-    ...mapVotacao(v),
-    objetos: (v.objetosPossiveis ?? []).map((o) => ({
+    ...base,
+    proposicao: principal ? siglaDe(principal) : undefined,
+    proposicaoTipo: principal?.siglaTipo,
+    ementa: principal?.ementa,
+    objetos: afetadas.map((o) => ({
       id: String(o.id),
-      sigla: `${o.siglaTipo} ${o.numero}/${o.ano}`,
+      sigla: siglaDe(o),
       ementa: o.ementa,
       url: `https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=${o.id}`,
     })),
@@ -357,6 +388,19 @@ export async function getProposicao(id: number | string): Promise<Proposicao> {
   return mapProposicao(dados);
 }
 
+/** Batch lookup: the API accepts a comma-separated `id` list. */
+export async function getProposicoesPorIds(ids: string[]): Promise<Proposicao[]> {
+  const out: Proposicao[] = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const lote = ids.slice(i, i + 50);
+    const { dados } = await getApi<{ dados: RawProposicao[] }>(
+      `${BASE}/proposicoes?id=${lote.join(",")}&itens=100`
+    );
+    out.push(...(dados ?? []).map(mapProposicao));
+  }
+  return out;
+}
+
 export async function getTramitacoes(id: number | string): Promise<Tramitacao[]> {
   const { dados } = await getApi<{ dados: RawTramitacao[] }>(
     `${BASE}/proposicoes/${id}/tramitacoes`
@@ -398,8 +442,10 @@ export async function getVotacoes(q: {
   dataFim: string;
   itens?: number;
   pagina?: number;
+  idOrgao?: number;
 }): Promise<PagedResult<Votacao>> {
   const url = new URL(`${BASE}/votacoes`);
+  if (q.idOrgao) url.searchParams.set("idOrgao", String(q.idOrgao));
   url.searchParams.set("dataInicio", q.dataInicio);
   url.searchParams.set("dataFim", q.dataFim);
   url.searchParams.set("itens", String(q.itens ?? 20));
@@ -426,20 +472,47 @@ export async function getVotacaoVotos(id: string): Promise<VotoParlamentar[]> {
     partido: v.deputado_.siglaPartido,
     uf: v.deputado_.siglaUf,
     foto: v.deputado_.urlFoto,
-    voto: v.tipoVoto,
+    ...VotoClassifier.classify(v.tipoVoto),
   }));
+}
+
+const LIDERANCA: Record<string, OrientacaoBancada["lideranca"]> = {
+  P: "partido",
+  B: "bloco",
+  G: "governo",
+};
+
+/** How each party/bloc leader oriented its members (empty for symbolic votes). */
+export async function getVotacaoOrientacoes(id: string): Promise<OrientacaoBancada[]> {
+  const { dados } = await getApi<{ dados: RawOrientacao[] }>(
+    `${BASE}/votacoes/${id}/orientacoes`
+  );
+  return (dados ?? [])
+    .filter((o) => o.orientacaoVoto?.trim())
+    .map((o) => {
+      const c = VotoClassifier.classify(o.orientacaoVoto);
+      const liberado = /libera/i.test(o.orientacaoVoto);
+      return {
+        sigla: o.siglaPartidoBloco,
+        orientacao: liberado ? "Liberado" : c.voto,
+        categoria: liberado ? null : c.categoria,
+        lideranca: LIDERANCA[o.codTipoLideranca] ?? "outro",
+      };
+    });
 }
 
 export async function getEventos(q: {
   dataInicio: string;
   dataFim: string;
   itens?: number;
+  ordem?: "ASC" | "DESC";
 }): Promise<Evento[]> {
   const url = new URL(`${BASE}/eventos`);
   url.searchParams.set("dataInicio", q.dataInicio);
   url.searchParams.set("dataFim", q.dataFim);
   url.searchParams.set("itens", String(q.itens ?? 50));
-  url.searchParams.set("ordem", "ASC");
+  url.searchParams.set("ordem", q.ordem ?? "ASC");
+  url.searchParams.set("ordenarPor", "dataHoraInicio");
   const { dados } = await getApi<{ dados: RawEvento[] }>(url.toString());
   return (dados ?? []).map(mapEvento);
 }
@@ -488,7 +561,7 @@ export async function getProposicoesPorAutor(
 
 /* ---------------- PECs voted in a given year (Câmara floor) ------------- */
 
-/** Split a year into the ≤3-month windows the `votacoes` API requires. */
+/** Split a year into the ≤3-month windows the API requires. */
 function periodosDoAno(ano: number): { ini: string; fim: string }[] {
   const hoje = new Date().toISOString().slice(0, 10);
   return [
@@ -498,112 +571,71 @@ function periodosDoAno(ano: number): { ini: string; fim: string }[] {
     { ini: `${ano}-10-01`, fim: `${ano}-12-31` },
   ]
     .map((w) => ({ ini: w.ini, fim: w.fim > hoje ? hoje : w.fim }))
-    .filter((w) => w.ini <= hoje && w.ini <= w.fim);
+    .filter((w) => w.ini <= w.fim);
 }
 
-const PEC_DESC_RE =
-  /Proposta de Emenda (?:à|a) Constitui[çc][ãa]o\s*n?[º°o]?\s*(\d+)\s*,?\s*(?:de\s*)?(\d{4})/i;
-
-/**
- * Reads a plenary vote description and returns the PEC whose *merit* was
- * voted, or null for procedural votes (requerimentos, interstícios…).
- */
-function parsePecMerito(descricao: string): { numero: number; ano: number } | null {
-  const m = PEC_DESC_RE.exec(descricao);
-  if (!m) return null;
-  const d = descricao.toLowerCase();
-  if (/^\s*(aprovad|rejeitad)[ao]?\s+o\s+requerimento/.test(d)) return null;
-  if (
-    d.includes("desmembramento") ||
-    d.includes("inclusão da proposta") ||
-    d.includes("inclusao da proposta") ||
-    d.includes("dispensa de interstício") ||
-    d.includes("dispensa de intersticio") ||
-    d.includes("quebra de interstício") ||
-    d.includes("quebra de intersticio")
-  ) {
-    return null;
+async function paginarTudo<T>(url: string, maxPaginas = 40): Promise<T[]> {
+  const out: T[] = [];
+  for (let pagina = 1; pagina <= maxPaginas; pagina += 1) {
+    const page = await getApiPaged<T>(`${url}&itens=100&pagina=${pagina}`);
+    out.push(...page.dados);
+    if (!hasRel(page.links, "next")) break;
   }
-  return { numero: Number(m[1]), ano: Number(m[2]) };
+  return out;
+}
+
+const TURNO_RE = /em\s+(primeiro|segundo|1[ºo°]|2[ºo°])\s+turno/i;
+
+export function turnoDe(descricao: string): 1 | 2 | null {
+  const m = TURNO_RE.exec(descricao);
+  if (!m) return null;
+  return /^(segundo|2)/i.test(m[1]) ? 2 : 1;
 }
 
 /**
- * PECs whose merit was voted on the Câmara floor during `ano`, regardless
- * of the year they were presented. Walks the year's plenary votes,
- * extracts PEC references from the vote descriptions and resolves each
- * one back to its proposition.
+ * PECs whose merit was voted on the Câmara floor during `ano`. A vote
+ * belongs to the proposition encoded in its id prefix (descriptions may
+ * cite the Senate numbering), and only first/second-round votes count —
+ * requerimentos and interstício waivers are procedural.
  */
 export async function getPecsVotadasNoAno(ano: number): Promise<Proposicao[]> {
-  interface Ref {
-    numero: number;
-    ano: number;
-    data: string;
-    aprovacao: number | null;
-    count: number;
-  }
-  const refs = new Map<string, Ref>();
+  const janelas = periodosDoAno(ano);
+  const pecs = new Map<string, RawProposicao>();
+  const votos: RawVotacao[] = [];
 
-  for (const w of periodosDoAno(ano)) {
-    for (let pagina = 1; pagina <= 60; pagina += 1) {
-      let page: { dados: RawVotacao[] };
-      try {
-        page = await getApiPaged<RawVotacao>(
-          `${BASE}/votacoes?dataInicio=${w.ini}&dataFim=${w.fim}&idOrgao=180&itens=100&pagina=${pagina}`
-        );
-      } catch {
-        break; // skip a failing window rather than fail the whole apuração
-      }
-      if (page.dados.length === 0) break;
-      for (const v of page.dados) {
-        const parsed = parsePecMerito(v.descricao ?? "");
-        if (!parsed) continue;
-        const key = `${parsed.ano}-${parsed.numero}`;
-        const cur = refs.get(key);
-        if (cur) {
-          cur.count += 1;
-          if (v.data && v.data < cur.data) cur.data = v.data;
-        } else {
-          refs.set(key, {
-            numero: parsed.numero,
-            ano: parsed.ano,
-            data: v.data,
-            aprovacao: v.aprovacao,
-            count: 1,
-          });
-        }
-      }
-      if (page.dados.length < 100) break;
-    }
+  for (const w of janelas) {
+    const periodo = `dataInicio=${w.ini}&dataFim=${w.fim}`;
+    const [props, vs] = await Promise.all([
+      paginarTudo<RawProposicao>(`${BASE}/proposicoes?siglaTipo=PEC&${periodo}&ordem=ASC&ordenarPor=id`),
+      paginarTudo<RawVotacao>(`${BASE}/votacoes?idOrgao=${PLENARIO_CAMARA}&${periodo}&ordem=ASC&ordenarPor=dataHoraRegistro`),
+    ]);
+    props.forEach((p) => pecs.set(String(p.id), p));
+    votos.push(...vs);
+  }
+
+  const porPec = new Map<string, RawVotacao[]>();
+  for (const v of votos) {
+    const pid = proposicaoIdDaVotacao(v.id);
+    if (!pecs.has(pid) || turnoDe(v.descricao ?? "") === null) continue;
+    porPec.set(pid, [...(porPec.get(pid) ?? []), v]);
   }
 
   const result: Proposicao[] = [];
-  for (const ref of refs.values()) {
-    let raw: RawProposicao | undefined;
-    try {
-      const { dados } = await getApi<{ dados: RawProposicao[] }>(
-        `${BASE}/proposicoes?siglaTipo=PEC&ano=${ref.ano}&numero=${ref.numero}`
-      );
-      raw = (dados ?? []).find((x) => x.numero === ref.numero) ?? dados?.[0];
-    } catch {
-      raw = undefined;
-    }
-    if (!raw) continue;
-    const base = mapProposicao(raw);
+  for (const [pid, vs] of porPec) {
+    const ordenados = [...vs].sort((a, b) => a.dataHoraRegistro.localeCompare(b.dataHoraRegistro));
+    const ultimo = ordenados[ordenados.length - 1];
+    const turno = turnoDe(ultimo.descricao);
+    const aprovada = /^\s*aprovad/i.test(ultimo.descricao) || ultimo.aprovacao === 1;
+    const base = mapProposicao(pecs.get(pid) as RawProposicao);
     result.push({
       ...base,
       votado: true,
-      votacaoData: ref.data,
-      status:
-        ref.aprovacao === 1
-          ? "Aprovada no Plenário"
-          : ref.aprovacao === 0
-            ? "Rejeitada no Plenário"
-            : base.status,
-      despacho: `${ref.count} votaç${ref.count === 1 ? "ão" : "ões"} de mérito em ${ano}`,
+      votacaoData: ultimo.data,
+      votacaoId: `camara-${ultimo.id}`,
+      status: `${aprovada ? "Aprovada" : "Rejeitada"} em ${turno}º turno no Plenário`,
+      despacho: ultimo.descricao,
     });
   }
 
-  return result.sort((a, b) =>
-    (b.votacaoData ?? "").localeCompare(a.votacaoData ?? "")
-  );
+  return result.sort((a, b) => (b.votacaoData ?? "").localeCompare(a.votacaoData ?? ""));
 }

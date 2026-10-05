@@ -1,0 +1,106 @@
+import { useMemo, useState } from "react";
+import { DeliberacaoFeed } from "@/components/hud/DeliberacaoFeed";
+import { HudGrid } from "@/components/hud/HudGrid";
+import { VotesDock } from "@/components/hud/VotesDock";
+import { ErrorState, LoadingRows } from "@/components/shared";
+import { useDeliberacoes } from "@/hooks/useDeliberacoes";
+import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
+import type { Parlamentar } from "@/lib/types";
+import { DeliberacaoSteps } from "./DeliberacaoSteps";
+import { PartyBreakdown } from "./PartyBreakdown";
+import { RollCallSheet } from "./RollCallSheet";
+import { VoteHero } from "./VoteHero";
+import { VoteStage } from "./VoteStage";
+
+function HeroSkeleton() {
+  return (
+    <div className="card" aria-busy="true" aria-label="Carregando votação">
+      <LoadingRows rows={1} height={20} />
+      <div className="mt-4"><LoadingRows rows={2} height={28} /></div>
+      <div className="mt-5"><LoadingRows rows={1} height={64} /></div>
+      <div className="mt-4"><LoadingRows rows={4} height={18} /></div>
+    </div>
+  );
+}
+
+export function VotacoesView({ votacaoId, onSelectMember }: {
+  votacaoId?: string;
+  onSelectMember: (p: Parlamentar) => void;
+}) {
+  const feed = useDeliberacoes();
+  const padrao = useMemo(
+    () => (feed.deliberacoes.find((d) => d.principal.nominal) ?? feed.deliberacoes[0])?.principal.id,
+    [feed.deliberacoes]
+  );
+  const id = votacaoId ?? padrao;
+  const completa = useVotacaoCompleta(id);
+  const deliberacao = useMemo(
+    () => feed.deliberacoes.find((d) => d.votacoes.some((v) => v.id === id)),
+    [feed.deliberacoes, id]
+  );
+
+  const [uf, setUf] = useState<{ id?: string; uf: string | null }>({ uf: null });
+  const activeUf = uf.id === id ? uf.uf : null;
+  const selectUf = (next: string | null) => setUf({ id, uf: next });
+  const [rollCall, setRollCall] = useState(false);
+
+  const { votacao, assentos, tally, orientacoes } = completa;
+  const carregando = (!id && feed.isLoading) || (!!id && completa.isLoading);
+
+  const left = carregando ? (
+    <HeroSkeleton />
+  ) : completa.isError || (!votacao && id) ? (
+    <div className="card">
+      <ErrorState compact title="Não foi possível carregar esta votação" onRetry={completa.refetch} />
+    </div>
+  ) : votacao ? (
+    <>
+      <VoteHero votacao={votacao} tally={tally} onOpenRollCall={() => setRollCall(true)} />
+      {deliberacao && id && <DeliberacaoSteps deliberacao={deliberacao} currentId={id} />}
+    </>
+  ) : (
+    <div className="card">
+      <ErrorState compact title="Nenhuma votação recente" onRetry={feed.refetch} />
+    </div>
+  );
+
+  const center = votacao ? (
+    <VoteStage votacao={votacao} assentos={assentos} tally={tally} activeUf={activeUf} onSelectUf={selectUf} />
+  ) : (
+    <div className="grid h-full min-h-[420px] place-items-center text-[12px] text-fg-4">
+      {carregando ? "Carregando mapa…" : ""}
+    </div>
+  );
+
+  const right = (
+    <>
+      {votacao && (
+        <PartyBreakdown assentos={assentos} orientacoes={orientacoes} activeUf={activeUf} onClearUf={() => selectUf(null)} />
+      )}
+      <DeliberacaoFeed deliberacoes={feed.deliberacoes} currentId={id} isLoading={feed.isLoading} />
+    </>
+  );
+
+  return (
+    <>
+      <HudGrid
+        left={left}
+        center={center}
+        right={right}
+        dock={<VotesDock deliberacoes={feed.deliberacoes} currentDate={votacao?.data.slice(0, 10)} />}
+      />
+      {votacao && (
+        <RollCallSheet
+          open={rollCall}
+          onOpenChange={setRollCall}
+          votacao={votacao}
+          assentos={assentos}
+          onSelect={(p) => {
+            setRollCall(false);
+            onSelectMember(p);
+          }}
+        />
+      )}
+    </>
+  );
+}

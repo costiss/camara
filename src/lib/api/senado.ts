@@ -6,7 +6,8 @@
  * `asArray` smooths that over. Media URLs sometimes come back as
  * `http://` and are upgraded to avoid mixed-content blocking.
  */
-import type { Parlamentar, Proposicao, Votacao } from "../types";
+import type { Parlamentar, Proposicao, Votacao, VotoParlamentar } from "../types";
+import { CADEIRAS, VotoClassifier, VoteTally } from "../votos";
 import { getJson } from "./http";
 
 const BASE = "https://legis.senado.leg.br/dadosabertos";
@@ -92,15 +93,30 @@ interface RawSenadorVotacao {
   SessaoPlenaria?: { DataSessao?: string };
 }
 
+interface RawVotoSenador {
+  codigoParlamentar: number;
+  nomeParlamentar: string;
+  siglaPartidoParlamentar?: string;
+  siglaUFParlamentar?: string;
+  siglaVotoParlamentar?: string;
+}
+
 interface RawVotacaoPlenario {
   codigoSessaoVotacao?: number | string;
   dataSessao?: string;
   descricaoVotacao?: string;
   ementa?: string;
   identificacao?: string;
+  sigla?: string;
   codigoMateria?: number;
   idProcesso?: number;
-  informeLegislativo?: { nomeColegiado?: string };
+  resultadoVotacao?: string;
+  votacaoSecreta?: string;
+  totalVotosSim?: number | null;
+  totalVotosNao?: number | null;
+  totalVotosAbstencao?: number | null;
+  informeLegislativo?: { nomeColegiado?: string; texto?: string };
+  votos?: RawVotoSenador[];
 }
 
 interface RawProcesso {
@@ -158,24 +174,63 @@ function mapSenadorVotacao(v: RawSenadorVotacao): Votacao {
     descricao: v.DescricaoVotacao ?? v.DescricaoResultado ?? "Votação",
     ementa: m?.Ementa,
     proposicao: m?.DescricaoIdentificacao ?? (m?.Sigla ? `${m.Sigla} ${m.Numero}/${m.Ano}` : undefined),
-    aprovacao: null,
+    aprovacao: /aprovad/i.test(v.DescricaoResultado ?? "")
+      ? 1
+      : /rejeitad/i.test(v.DescricaoResultado ?? "")
+        ? 0
+        : null,
     placar: null,
+    plenario: true,
+  };
+}
+
+function mapVotoSenador(v: RawVotoSenador): VotoParlamentar {
+  return {
+    parlamentarId: `senado-${v.codigoParlamentar}`,
+    nome: v.nomeParlamentar,
+    partido: v.siglaPartidoParlamentar ?? "—",
+    uf: v.siglaUFParlamentar ?? "—",
+    ...VotoClassifier.classify(v.siglaVotoParlamentar),
   };
 }
 
 function mapVotacaoPlenario(v: RawVotacaoPlenario): Votacao {
+  const votos = asArray(v.votos).map(mapVotoSenador);
+  const secreta = v.votacaoSecreta === "S";
+  const tally = new VoteTally(votos, CADEIRAS.senado);
+  const placar =
+    v.totalVotosSim != null
+      ? {
+          sim: v.totalVotosSim,
+          nao: v.totalVotosNao ?? 0,
+          abstencao: v.totalVotosAbstencao ?? 0,
+          total: (v.totalVotosSim ?? 0) + (v.totalVotosNao ?? 0) + (v.totalVotosAbstencao ?? 0),
+        }
+      : secreta
+        ? null
+        : tally.placar;
+  const resultado = v.resultadoVotacao?.toUpperCase();
   return {
-    id: `senado-${v.codigoSessaoVotacao ?? v.idProcesso ?? Math.random()}`,
+    id: `senado-${v.codigoSessaoVotacao ?? v.idProcesso}`,
     casa: "senado",
     data: v.dataSessao ?? "",
     dataHora: v.dataSessao,
-    orgao: v.informeLegislativo?.nomeColegiado ?? "Plenário",
+    orgao: v.informeLegislativo?.nomeColegiado ?? "Plenário do Senado Federal",
+    plenario: true,
     descricao: v.descricaoVotacao ?? "Votação",
     ementa: v.ementa,
     proposicao: v.identificacao,
+    proposicaoTipo: v.sigla,
+    proposicaoId: v.codigoMateria ? String(v.codigoMateria) : undefined,
     materiaId: v.codigoMateria,
-    aprovacao: null,
-    placar: null,
+    aprovacao: resultado === "A" ? 1 : resultado === "R" ? 0 : null,
+    placar,
+    nominal: votos.length > 0,
+    secreta,
+    votos,
+    url: v.codigoMateria
+      ? `https://www25.senado.leg.br/web/atividade/materias/-/materia/${v.codigoMateria}`
+      : undefined,
   };
 }
 
@@ -251,9 +306,9 @@ export async function getSenadorVotacoes(
 export async function getSenadoVotacoes(): Promise<Votacao[]> {
   const data = await getJson<RawVotacaoPlenario[]>(`${BASE}/votacao`);
   return asArray(data)
-    .filter((v) => v.dataSessao)
+    .filter((v) => v.dataSessao && v.codigoSessaoVotacao)
     .map(mapVotacaoPlenario)
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    .sort((a, b) => b.data.localeCompare(a.data) || b.id.localeCompare(a.id, undefined, { numeric: true }));
 }
 
 /** Senate propositions by type/year via the modern `/processo` endpoint. */

@@ -4,57 +4,44 @@ A dark, editorial single-page app for following the Brazilian National Congress:
 **PECs**, floor votes, agendas and the composition of the **Câmara dos Deputados**
 and the **Senado Federal** — built from the official open-data APIs.
 
-Visual language inspired by [seuimposto.com](https://seuimposto.com/): glass
-surfaces, hairline borders, big serif figures, tabular numbers, restrained colour.
+Layout and visual language follow [seuimposto.com](https://seuimposto.com/)'s
+HUD: a fixed top bar with a pill switcher, three glass columns around a central
+Brazil map, Faustina serif figures and a timeline dock at the bottom.
 
 ## Stack
 
 - **React 19 + TypeScript + Vite**
 - **Tailwind CSS v4** (design tokens in `src/index.css`)
-- **shadcn-style UI primitives** built on **Radix UI** (`src/components/ui`)
+- **Radix UI** primitives (`src/components/ui`)
 - **TanStack Query** for caching, retries and background refresh
-- **Recharts** for the distribution and historical charts
+- State outlines from the IBGE malhas API, pre-projected into `src/lib/geo/brazilShapes.ts`
 
-## Features
+## Views
 
-- **Visão geral** — live KPIs, recent floor votes from both houses, upcoming
-  sessions, latest PECs, party composition and historical trends.
-- **PECs** — Câmara **and** Senate propositions in one place, with house/year
-  filters, full-text search and pagination.
-- **Agenda & votações** — upcoming Câmara sessions with their **pauta**
-  (agenda items), recent Câmara votes and recent Senate nominal votes.
-- **Votação — página dedicada** (`#/votacao/<id>`) — each vote gets its own page
-  with a **parliament hemicycle** (every seat is one vote, recolorable by vote or
-  by party, hover for the member's name), vote distribution, how each party
-  voted, and the full roll-call with names, party and state.
-- **Deputados / Senadores** — search, party/state filters, bancada overview and
-  per-member detail (profile, recent propositions or votes).
-- **Atividades** — a unified activity feed (votes, propositions, sessions)
-  filterable by kind.
-- **Métricas** — party and state distributions for both houses, PEC status
-  breakdown, vote outcomes and historical series (PECs per year, votes per month).
+- **Votações** (`#/votacoes/<id>`) — the latest nominal floor vote by default.
+  Headline card with Sim × Não, quorum (3/5 for PEC, absolute majority for PLP),
+  presence and absences; a map of % Sim per state or a hemicycle with every seat
+  (absent members included); how each party voted and its leader's orientation;
+  every vote of the same session; full roll-call; feed of both houses.
+- **Câmara / Senado** — composition: left/centre/right bar, seats by party,
+  map of the leading party per state (click a state to filter), bancadas and members.
+- **PECs** — PECs voted on the Câmara floor in a year, PECs tabled per house and year.
+- **Agenda** — upcoming and past Câmara events with their pauta.
 
-### Filtro "já votados"
+Ctrl K searches deputies, senators and recent votes.
 
-Every list of legislative items can be narrowed to what has already been voted:
+## How votes are read
 
-- **PECs** — two modes: **Apresentadas** (by the year the PEC was tabled) with a
-  `Todas / Já votadas / Ainda não votadas` filter, and **Votadas em {ano}**,
-  which lists the PECs whose *merit* was voted on the Câmara floor that year —
-  even if they were tabled years earlier (the year selector becomes the voting
-  year). Procedural votes (requerimentos, interstícios) are ignored.
-- **Agenda** — sessions split into `Próximas / Já realizadas`, and each session's
-  pauta can be filtered to `Já votados`.
-- **Atividades** — a `Já votados` toggle keeps only votes and deliberated
-  propositions.
-- **Votação** — a `Já votados` toggle keeps only members with a recorded vote.
-
-Detail sheets expose the legislative history:
-
-- **PEC / proposição** — tramitação timeline, autoria and related votes (Câmara);
-  situation and authorship (Senado).
-- **Parlamentar** — profile plus recent authored propositions (deputy) or
-  nominal votes (senator).
+- A Câmara vote id is `{idProposicao}-{seq}`: the prefix is the bill being voted,
+  even when the description cites another numbering (e.g. the Senate's).
+- Votes are grouped into **deliberações** (same bill, same day); the principal
+  one is the nominal merit vote, ahead of destaques and requerimentos.
+- `aprovacao` is null for destaques ("Mantido o texto") and the description is
+  the source of truth for the result.
+- Senate results come from `resultadoVotacao`, and its roll-call is inline;
+  codes such as `AP`, `LS`, `MIS`, `P-NRV` become absent/present-without-vote.
+- **PECs votadas em {ano}** count only 1st/2nd-round floor votes, matching
+  plenary votes to PECs by id prefix within each 3-month API window.
 
 ## Data sources
 
@@ -78,17 +65,14 @@ The API layer lives in `src/lib/api`:
 ```
 src/
 ├── components/
-│   ├── ui/         shadcn-style primitives (Radix based)
-│   ├── layout/     app shell, sidebar, top bar
-│   ├── shared/     cards, badges, charts, KPIs, feeds
-│   └── detail/     proposition / member / vote sheets
-├── hooks/          TanStack Query hooks + tiny hash router
-├── lib/            api adapters, domain types, formatters, aggregates
-└── pages/          one component per route
+│   ├── hud/        header, search, Brazil map, feed, timeline dock, grid
+│   ├── shared/     hemicycle, avatars, badges, states
+│   ├── detail/     proposition / member sheets
+│   └── ui/         Radix-based primitives
+├── views/          votacoes, casa (Câmara/Senado), pecs, agenda
+├── hooks/          TanStack Query hooks + hash router
+└── lib/            api adapters, vote semantics, breakdowns, geo shapes
 ```
-
-Navigation uses a dependency-free hash router (`src/hooks/useUi.ts`), so deep
-links work (`#/pecs`, `#/agenda`, `#/votacao/camara-2611313-31`, …).
 
 ## Getting started
 

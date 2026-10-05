@@ -54,6 +54,8 @@ export interface Proposicao {
   votado?: boolean;
   /** Date of the recorded vote (when known). */
   votacaoData?: string;
+  /** Latest merit vote, routable as `#/votacoes/<id>`. */
+  votacaoId?: string;
   url?: string;
   inteiroTeor?: string;
 }
@@ -97,20 +99,39 @@ export interface Votacao {
   data: string;
   dataHora?: string;
   orgao: string;
+  /** True for floor (plenário) votes. */
+  plenario?: boolean;
   descricao: string;
   ementa?: string;
-  /** 1 = aprovada, 0 = rejeitada, null = sem placar/desconhecido. */
+  /** 1 = aprovada, 0 = rejeitada, null = sem resultado binário (ex.: destaque). */
   aprovacao?: number | null;
   placar?: Placar | null;
+  /** Sigla of the voted proposition, e.g. `PLP 74/2026`. */
   proposicao?: string;
+  /** Câmara proposition id (the vote id prefix) or Senate matéria code. */
+  proposicaoId?: string;
+  proposicaoTipo?: string;
+  /** Roll-call vote (individual votes are recorded). */
+  nominal?: boolean;
+  secreta?: boolean;
   url?: string;
   /** Senate: código da matéria, used to cross-reference propositions. */
   materiaId?: number;
-  /** Propositions that could be the object of the vote (Câmara detail). */
+  /** Propositions affected by the vote (Câmara detail). */
   objetos?: VotacaoObjeto[];
-  /** Individual votes (loaded on demand). */
+  /** Individual votes (Senate payload ships them inline). */
   votos?: VotoParlamentar[];
 }
+
+export type VotoCategoria =
+  | "sim"
+  | "nao"
+  | "abstencao"
+  | "obstrucao"
+  | "presidente"
+  | "presente"
+  | "secreto"
+  | "ausente";
 
 export interface VotoParlamentar {
   parlamentarId: string;
@@ -118,7 +139,18 @@ export interface VotoParlamentar {
   partido: string;
   uf: string;
   foto?: string;
+  /** Normalised, human-readable vote label. */
   voto: string;
+  categoria: VotoCategoria;
+  /** Raw code when it carries extra meaning (e.g. Senate `LS`, `MIS`). */
+  detalhe?: string;
+}
+
+export interface OrientacaoBancada {
+  sigla: string;
+  orientacao: string;
+  categoria: VotoCategoria | null;
+  lideranca: "partido" | "bloco" | "governo" | "outro";
 }
 
 export interface Evento {

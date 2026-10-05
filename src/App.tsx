@@ -1,96 +1,55 @@
+import { useCallback, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AppShell } from "@/components/layout/AppShell";
+import { ParlamentarDetail } from "@/components/detail/ParlamentarDetail";
+import { HudHeader } from "@/components/hud/HudHeader";
+import { SearchDialog } from "@/components/hud/SearchDialog";
+import { useSearchHotkey } from "@/hooks/useSearchHotkey";
 import { useRoute } from "@/hooks/useUi";
-import { Dashboard } from "@/pages/Dashboard";
-import { Pecs } from "@/pages/Pecs";
-import { Agenda } from "@/pages/Agenda";
-import { Votacao } from "@/pages/Votacao";
-import { Deputados } from "@/pages/Deputados";
-import { Senadores } from "@/pages/Senadores";
-import { Atividades } from "@/pages/Atividades";
-import { Metricas } from "@/pages/Metricas";
+import type { Parlamentar } from "@/lib/types";
+import { AgendaView } from "@/views/agenda/AgendaView";
+import { CasaView } from "@/views/casa/CasaView";
+import { PecsView } from "@/views/pecs/PecsView";
+import { VotacoesView } from "@/views/votacoes/VotacoesView";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 3,
-      retryDelay: (attempt) =>
-        Math.min(1000 * 2 ** attempt, 10_000) + Math.floor(Math.random() * 600),
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000) + Math.floor(Math.random() * 600),
       refetchOnWindowFocus: false,
       staleTime: 60_000,
     },
   },
 });
 
-interface PageMeta {
-  title: string;
-  subtitle: string;
-  render: () => React.ReactNode;
+function Hud() {
+  const route = useRoute();
+  const [busca, setBusca] = useState(false);
+  const [membro, setMembro] = useState<Parlamentar | null>(null);
+  const abrirBusca = useCallback(() => setBusca(true), []);
+  useSearchHotkey(abrirBusca);
+
+  return (
+    <div className="hud">
+      <HudHeader view={route.view} onSearch={abrirBusca} />
+      {route.view === "votacoes" && <VotacoesView votacaoId={route.param} onSelectMember={setMembro} />}
+      {route.view === "camara" && <CasaView key="camara" casa="camara" onSelectMember={setMembro} />}
+      {route.view === "senado" && <CasaView key="senado" casa="senado" onSelectMember={setMembro} />}
+      {route.view === "pecs" && <PecsView />}
+      {route.view === "agenda" && <AgendaView />}
+      <SearchDialog open={busca} onOpenChange={setBusca} onSelectMember={setMembro} />
+      <ParlamentarDetail parlamentar={membro} open={!!membro} onOpenChange={(o) => !o && setMembro(null)} />
+    </div>
+  );
 }
 
-const PAGES: Record<string, PageMeta> = {
-  dashboard: {
-    title: "Visão geral",
-    subtitle: "O Congresso Nacional em números, agora",
-    render: () => <Dashboard />,
-  },
-  pecs: {
-    title: "PECs",
-    subtitle: "Propostas de Emenda à Constituição — Câmara e Senado",
-    render: () => <Pecs />,
-  },
-  agenda: {
-    title: "Agenda & votações",
-    subtitle: "Próximas sessões, pautas e votações recentes",
-    render: () => <Agenda />,
-  },
-  deputados: {
-    title: "Deputados",
-    subtitle: "Câmara dos Deputados — bancada em exercício",
-    render: () => <Deputados />,
-  },
-  senadores: {
-    title: "Senadores",
-    subtitle: "Senado Federal — bancada em exercício",
-    render: () => <Senadores />,
-  },
-  atividades: {
-    title: "Atividades",
-    subtitle: "Movimentações legislativas recentes das duas casas",
-    render: () => <Atividades />,
-  },
-  metricas: {
-    title: "Métricas",
-    subtitle: "Distribuições, composição e séries históricas",
-    render: () => <Metricas />,
-  },
-};
-
-function App() {
-  const route = useRoute();
-  const [base, ...rest] = route.split("/");
-  const isVotacao = base === "votacao" && rest.length > 0;
-  const page = PAGES[base] ?? PAGES.dashboard;
-
-  const title = isVotacao ? "Votação" : page.title;
-  const subtitle = isVotacao
-    ? "Resultado, gráficos e votação nominal"
-    : page.subtitle;
-
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={200}>
-        <AppShell title={title} subtitle={subtitle}>
-          {isVotacao ? (
-            <Votacao id={decodeURIComponent(rest.join("/"))} />
-          ) : (
-            page.render()
-          )}
-        </AppShell>
+        <Hud />
       </TooltipProvider>
     </QueryClientProvider>
   );
 }
-
-export default App;

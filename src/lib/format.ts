@@ -22,8 +22,11 @@ const dtt = new Intl.DateTimeFormat("pt-BR", {
 
 const num = new Intl.NumberFormat("pt-BR");
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
 function toDate(value?: string | Date | null): Date | null {
   if (!value) return null;
+  if (typeof value === "string" && DATE_ONLY.test(value)) return new Date(`${value}T12:00:00`);
   const d = value instanceof Date ? value : new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -39,6 +42,7 @@ export function formatDateLong(value?: string | Date | null): string {
 }
 
 export function formatDateTime(value?: string | Date | null): string {
+  if (typeof value === "string" && DATE_ONLY.test(value)) return formatDate(value);
   const d = toDate(value);
   return d ? dtt.format(d) : "—";
 }
@@ -108,10 +112,11 @@ export function truncate(text: string, max: number): string {
   return text.slice(0, max - 1).trimEnd() + "…";
 }
 
-/** Turn a raw date into a safe ISO string the API can consume. */
+/** Local calendar date (YYYY-MM-DD); the APIs and session dates are in Brasília time. */
 export function isoDate(value: Date | string): string {
   const d = toDate(value) ?? new Date();
-  return d.toISOString().slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 export function startOfDay(d = new Date()): Date {

@@ -12,21 +12,51 @@ export function useDebouncedValue<T>(value: T, delay = 250): T {
 
 /* --------------------------- tiny hash router --------------------------- */
 
+export type View = "votacoes" | "camara" | "senado" | "pecs" | "agenda";
+
+export interface Route {
+  view: View;
+  param?: string;
+}
+
+const LEGADO: Record<string, View> = {
+  dashboard: "votacoes",
+  votacao: "votacoes",
+  atividades: "votacoes",
+  deputados: "camara",
+  metricas: "camara",
+  senadores: "senado",
+};
+
+const VIEWS: View[] = ["votacoes", "camara", "senado", "pecs", "agenda"];
+
 function subscribe(callback: () => void) {
   window.addEventListener("hashchange", callback);
   return () => window.removeEventListener("hashchange", callback);
 }
 
-function currentRoute(): string {
-  const raw = window.location.hash.replace(/^#\/?/, "").trim();
-  return raw || "dashboard";
+function currentHash(): string {
+  return window.location.hash.replace(/^#\/?/, "").trim();
 }
 
-export function navigate(route: string) {
-  if (currentRoute() === route) return;
-  window.location.hash = `/${route}`;
+export function parseRoute(hash: string): Route {
+  const [head, ...rest] = hash.split("/");
+  const param = rest.length ? decodeURIComponent(rest.join("/")) : undefined;
+  if ((VIEWS as string[]).includes(head)) return { view: head as View, param };
+  if (LEGADO[head]) return { view: LEGADO[head], param };
+  return { view: "votacoes" };
 }
 
-export function useRoute(): string {
-  return useSyncExternalStore(subscribe, currentRoute, () => "dashboard");
+export function routeHref(view: View, param?: string): string {
+  return `#/${view}${param ? `/${encodeURIComponent(param)}` : ""}`;
+}
+
+export function navigate(view: View, param?: string) {
+  const href = routeHref(view, param);
+  if (window.location.hash !== href) window.location.hash = href.slice(1);
+}
+
+export function useRoute(): Route {
+  const hash = useSyncExternalStore(subscribe, currentHash, () => "");
+  return parseRoute(hash);
 }

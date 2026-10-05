@@ -15,6 +15,8 @@ import {
   getProposicoesPorAutor,
   getTramitacoes,
   getVotacao,
+  turnoDe,
+  getVotacaoOrientacoes,
   getVotacaoVotos,
   getVotacoes,
   type ProposicoesQuery,
@@ -103,7 +105,7 @@ export function useProposicaoVotacoes(id?: number | string) {
   });
 }
 
-/** Which Câmara propositions already have a recorded vote. */
+/** Which Câmara propositions had a merit vote (1st/2nd round) on the floor. */
 export function useProposicoesVotadas(ids: string[], enabled = true) {
   const queries = useQueries({
     queries: (enabled ? ids : []).map((id) => ({
@@ -114,7 +116,9 @@ export function useProposicoesVotadas(ids: string[], enabled = true) {
   });
   const map = new Map<string, boolean>();
   if (enabled) {
-    ids.forEach((id, i) => map.set(id, (queries[i]?.data?.length ?? 0) > 0));
+    ids.forEach((id, i) =>
+      map.set(id, (queries[i]?.data ?? []).some((v) => v.plenario && turnoDe(v.descricao) !== null))
+    );
   }
   return {
     map,
@@ -146,6 +150,7 @@ export function useVotacoes(query: {
   dataFim: string;
   itens?: number;
   pagina?: number;
+  idOrgao?: number;
 }) {
   return useQuery({
     queryKey: ["votacoes", query],
@@ -164,6 +169,15 @@ export function useVotacaoVotos(id?: string) {
   });
 }
 
+export function useVotacaoOrientacoes(id?: string) {
+  return useQuery({
+    queryKey: ["votacao-orientacoes", id],
+    queryFn: () => getVotacaoOrientacoes(id as string),
+    enabled: !!id,
+    staleTime: STALE,
+  });
+}
+
 export function useVotacao(id?: string) {
   return useQuery({
     queryKey: ["votacao", id],
@@ -177,6 +191,7 @@ export function useEventos(query: {
   dataInicio: string;
   dataFim: string;
   itens?: number;
+  ordem?: "ASC" | "DESC";
 }) {
   return useQuery({
     queryKey: ["eventos", query],

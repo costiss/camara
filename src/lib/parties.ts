@@ -1,65 +1,45 @@
 import type { StatusTone } from "./types";
 
-/**
- * Party palette. Brazilian parties have recognisable colours; where a
- * party is not listed we fall back to a stable slot in a neutral,
- * editorially-muted palette so charts never look accidental.
- */
 const PARTY_COLORS: Record<string, string> = {
-  PT: "#d64550",
-  PL: "#2f5bb7",
-  UNIÃO: "#3d7fd6",
-  "UNIAO": "#3d7fd6",
-  PP: "#4a6fa5",
-  MDB: "#3f9d6b",
-  PSD: "#e0902f",
-  REPUBLICANOS: "#2b6cb0",
-  PSDB: "#3b6fb0",
-  PDT: "#d94f4f",
-  PSB: "#e0b431",
-  PODE: "#2f9d63",
-  PODEMOS: "#2f9d63",
-  PSOL: "#d64550",
-  NOVO: "#e0792f",
-  CIDADANIA: "#c65c9e",
-  PCDOB: "#b83a3f",
-  SOLIDARIEDADE: "#d99a2b",
-  AVANTE: "#d97b2b",
-  PRD: "#2f8d5a",
-  REDE: "#2fa89d",
-  PV: "#3f9d55",
-  PROS: "#c47a3a",
-  PSC: "#3a7a8d",
-  PATRIOTA: "#4a8d6f",
-  PMN: "#7a6fb0",
-  DC: "#6f8fb0",
-  PCB: "#b03a3a",
-  PSTU: "#a83a5a",
-  PCO: "#8a3a8a",
+  PL: "#3D63DD",
+  PT: "#E5484D",
+  "UNIÃO": "#38BDF8",
+  UNIAO: "#38BDF8",
+  PP: "#9CC9F5",
+  PSD: "#86C25B",
+  MDB: "#1F8A4C",
+  REPUBLICANOS: "#3E7CB1",
+  PSB: "#E8B73A",
+  PDT: "#C2413B",
+  PSDB: "#2E64A8",
+  PODE: "#4FB3A9",
+  PODEMOS: "#4FB3A9",
+  PSOL: "#F2C94C",
+  NOVO: "#F08A24",
+  "PC DO B": "#B5283A",
+  PCDOB: "#B5283A",
+  SOLIDARIEDADE: "#E37B2F",
+  AVANTE: "#D9902F",
+  PRD: "#2F9A6B",
+  CIDADANIA: "#D46BA8",
+  PV: "#5BAF4A",
+  REDE: "#2FA89D",
+  PSC: "#3A7A8D",
+  PMB: "#9B6FD1",
+  AGIR: "#7C8FB0",
+  MOBILIZA: "#A08A5C",
+  DC: "#6F8FB0",
+  PCO: "#8A3A8A",
+  "S.PART.": "#85827C",
 };
 
-const FALLBACK = [
-  "#d4a853",
-  "#60a5fa",
-  "#4ade80",
-  "#f87171",
-  "#c084fc",
-  "#fb923c",
-  "#2dd4bf",
-  "#f472b6",
-  "#fbbf24",
-  "#a3e635",
-  "#7dd3fc",
-  "#fda4af",
-];
+const FALLBACK = ["#C9A86A", "#7DD3FC", "#A3E635", "#F472B6", "#C084FC", "#2DD4BF"];
 
 export function partyColor(party: string): string {
   const key = (party || "").toUpperCase();
   if (PARTY_COLORS[key]) return PARTY_COLORS[key];
   let hash = 0;
-  for (let i = 0; i < key.length; i += 1) {
-    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-  }
+  for (let i = 0; i < key.length; i += 1) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
   return FALLBACK[hash % FALLBACK.length];
 }
 
@@ -72,80 +52,46 @@ export function withAlpha(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** Map a free-text legislative status onto a visual tone. */
+export type Espectro = "esquerda" | "centro" | "direita";
+
+const CENTRO = new Set(["MDB", "PSD", "PP", "UNIÃO", "UNIAO", "REPUBLICANOS"]);
+const ESQUERDA = new Set(["PT", "PSOL", "PC DO B", "PCDOB", "PSB", "PDT", "PV", "REDE", "CIDADANIA", "PCB", "PSTU", "PCO", "UP"]);
+
+export const ESPECTRO_COR: Record<Espectro, string> = {
+  esquerda: "#E5484D",
+  centro: "#BFA98A",
+  direita: "#3D63DD",
+};
+
+export const ESPECTRO_CENTRO_NOTA = "Centro: MDB, PSD, PP, União e Republicanos";
+export const ESPECTRO_REGRA =
+  "Esquerda: PT, PSOL, PCdoB, PSB, PDT, PV, Rede e Cidadania. Centro: MDB, PSD, PP, União e Republicanos. Demais siglas à direita.";
+
+/** Coarse left/centre/right grouping used by the composition bar. */
+export function espectroDe(party: string): Espectro {
+  const key = (party || "").toUpperCase();
+  if (CENTRO.has(key)) return "centro";
+  return ESQUERDA.has(key) ? "esquerda" : "direita";
+}
+
+const CURTA: Record<string, string> = {
+  REPUBLICANOS: "REPUB.",
+  SOLIDARIEDADE: "SOLID.",
+  CIDADANIA: "CIDAD.",
+  MOBILIZA: "MOBIL.",
+};
+
+/** Short label for tight spaces such as map callouts. */
+export function siglaCurta(party: string): string {
+  return CURTA[(party || "").toUpperCase()] ?? party;
+}
+
 export function statusTone(status?: string): StatusTone {
   const s = (status || "").toLowerCase();
   if (!s) return "neutral";
-  if (
-    s.includes("aprovad") ||
-    s.includes("promulgad") ||
-    s.includes("sancionad") ||
-    s.includes("transformad")
-  ) {
-    return "success";
-  }
-  if (
-    s.includes("rejeitad") ||
-    s.includes("arquivad") ||
-    s.includes("encerrad") ||
-    s.includes("prejudicad") ||
-    s.includes("retirad") ||
-    s.includes("cancelad")
-  ) {
-    return "danger";
-  }
-  if (
-    s.includes("tramita") ||
-    s.includes("aguardando") ||
-    s.includes("pronta") ||
-    s.includes("pauta")
-  ) {
-    return "warning";
-  }
-  if (s.includes("convocad") || s.includes("agendad")) return "info";
-  return "neutral";
-}
-
-export function votacaoTone(aprovacao?: number | null): StatusTone {
-  if (aprovacao === 1) return "success";
-  if (aprovacao === 0) return "danger";
-  return "neutral";
-}
-
-/* ------------------------------- votes -------------------------------- */
-
-export const VOTO_ORDER = [
-  "Sim",
-  "Não",
-  "Abstenção",
-  "Obstrução",
-  "Artigo 17",
-  "Art. 17",
-] as const;
-
-const VOTO_COLORS: Record<string, string> = {
-  Sim: "#4ade80",
-  "Não": "#f87171",
-  Abstenção: "#85827c",
-  Obstrução: "#fbbf24",
-  "Artigo 17": "#60a5fa",
-  "Art. 17": "#60a5fa",
-};
-
-export function voteColor(voto: string): string {
-  return VOTO_COLORS[voto] ?? "#7dd3fc";
-}
-
-export function voteRank(voto: string): number {
-  const i = (VOTO_ORDER as readonly string[]).indexOf(voto);
-  return i === -1 ? 99 : i;
-}
-
-export function voteTone(voto: string): StatusTone {
-  const v = voto.toLowerCase();
-  if (v.startsWith("sim")) return "success";
-  if (v.startsWith("não") || v.startsWith("nao")) return "danger";
-  if (v.startsWith("obstr")) return "warning";
-  if (v.startsWith("art")) return "info";
+  if (/aprovad|promulgad|sancionad|transformad/.test(s)) return "success";
+  if (/rejeitad|arquivad|encerrad|prejudicad|retirad|cancelad/.test(s)) return "danger";
+  if (/tramita|aguardando|pronta|pauta/.test(s)) return "warning";
+  if (/convocad|agendad/.test(s)) return "info";
   return "neutral";
 }
