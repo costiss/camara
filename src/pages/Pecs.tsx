@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FileText, Search } from "lucide-react";
-import { useProposicoes } from "@/hooks/useCamara";
+import { useProposicoes, useProposicoesVotadas } from "@/hooks/useCamara";
 import { useSenadoProcessos } from "@/hooks/useSenado";
 import { useDebouncedValue } from "@/hooks/useUi";
 import {
@@ -21,6 +21,7 @@ import { ProposicaoDetail } from "@/components/detail/ProposicaoDetail";
 import type { Proposicao } from "@/lib/types";
 
 type CasaFilter = "todas" | "camara" | "senado";
+type VotacaoFilter = "todas" | "votadas" | "nao_votadas";
 
 export function Pecs() {
   const anoAtual = new Date().getFullYear();
@@ -28,6 +29,7 @@ export function Pecs() {
   const [ano, setAno] = useState(anoAtual);
   const [pagina, setPagina] = useState(1);
   const [search, setSearch] = useState("");
+  const [votacao, setVotacao] = useState<VotacaoFilter>("todas");
   const [selected, setSelected] = useState<Proposicao | null>(null);
   const debounced = useDebouncedValue(search, 250);
 
@@ -57,19 +59,44 @@ export function Pecs() {
     });
   }, [casa, camaraItems, senadoItems]);
 
+  // Which propositions already have a recorded vote.
+  const camaraIds = useMemo(() => camaraItems.map((p) => p.id), [camaraItems]);
+  const votadasQ = useProposicoesVotadas(camaraIds);
+
+  const isVotada = useCallback(
+    (p: Proposicao) => {
+      if (p.votado !== undefined) return p.votado;
+      if (p.casa === "camara") return votadasQ.map.get(p.id) ?? false;
+      // Senate: fall back to the situation text.
+      return /aprovad|rejeitad|promulgad/i.test(p.status ?? "");
+    },
+    [votadasQ.map]
+  );
+
+  const votedIds = useMemo(
+    () => new Set(items.filter(isVotada).map((p) => p.id)),
+    [items, isVotada]
+  );
+
   const filtered = useMemo(() => {
     const q = debounced.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (p) =>
-        p.ementa.toLowerCase().includes(q) ||
-        p.sigla.toLowerCase().includes(q) ||
-        (p.autor ?? "").toLowerCase().includes(q)
-    );
-  }, [items, debounced]);
+    let list = items;
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.ementa.toLowerCase().includes(q) ||
+          p.sigla.toLowerCase().includes(q) ||
+          (p.autor ?? "").toLowerCase().includes(q)
+      );
+    }
+    if (votacao === "votadas") list = list.filter(isVotada);
+    else if (votacao === "nao_votadas") list = list.filter((p) => !isVotada(p));
+    return list;
+  }, [items, debounced, votacao, isVotada]);
 
   const anos = Array.from({ length: 10 }, (_, i) => anoAtual - i);
   const isLoading = camaraQ.isLoading || senadoQ.isLoading;
+  const votacaoLoading = votacao !== "todas" && votadasQ.isLoading;
   const isError = camaraQ.isError && senadoQ.isError;
   const totalCamara = camaraQ.data?.total ?? camaraItems.length;
 
@@ -97,10 +124,11 @@ export function Pecs() {
           hint="após filtros"
         />
         <KpiCard
-          label="Período"
-          value={ano}
-          tone="neutral"
-          hint="ano de apresentação"
+          label="Já votadas"
+          value={votedIds.size}
+          tone="success"
+          hint="nesta página"
+          loading={votadasQ.isLoading}
         />
       </div>
 
@@ -154,6 +182,20 @@ export function Pecs() {
             ))}
           </SelectContent>
         </Select>
+
+        <Select
+          value={votacao}
+          onValueChange={(v) => setVotacao(v as VotacaoFilter)}
+        >
+          <SelectTrigger className="w-[165px] shrink-0">
+            <SelectValue placeholder="Votação" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas as PECs</SelectItem>
+            <SelectItem value="votadas">Já votadas</SelectItem>
+            <SelectItem value="nao_votadas">Ainda não votadas</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {isError ? (
@@ -164,19 +206,20 @@ export function Pecs() {
             senadoQ.refetch();
           }}
         />
-      ) : isLoading ? (
+      ) : isLoading || votacaoLoading ? (
         <LoadingRows rows={6} height={100} />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={FileText}
           title="Nenhuma PEC encontrada"
-          description="Tente outro ano, outra casa ou ajuste a busca."
+          description="Tente outro ano, outra casa ou ajuste a busca e o filtro de votação."
         />
       ) : (
         <>
           <ProposicoesList
             items={filtered}
             onOpen={setSelected}
+            votedIds={votedIds}
             className="space-y-2"
           />
 

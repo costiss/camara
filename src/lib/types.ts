@@ -50,6 +50,8 @@ export interface Proposicao {
   despacho?: string;
   situacaoData?: string;
   tramitando?: boolean;
+  /** True when this proposition already has a recorded vote. */
+  votado?: boolean;
   url?: string;
   inteiroTeor?: string;
 }
@@ -100,6 +102,8 @@ export interface Votacao {
   placar?: Placar | null;
   proposicao?: string;
   url?: string;
+  /** Senate: código da matéria, used to cross-reference propositions. */
+  materiaId?: number;
   /** Propositions that could be the object of the vote (Câmara detail). */
   objetos?: VotacaoObjeto[];
   /** Individual votes (loaded on demand). */

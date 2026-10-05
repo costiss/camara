@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarClock, ChevronDown, Gavel, Landmark } from "lucide-react";
+import { CalendarClock, CheckCircle2, ChevronDown, Gavel, Landmark } from "lucide-react";
 import {
   useEventoPauta,
   useEventos,
@@ -7,6 +7,7 @@ import {
 } from "@/hooks/useCamara";
 import { useSenadoVotacoes } from "@/hooks/useSenado";
 import { navigate } from "@/hooks/useUi";
+import { Badge } from "@/components/ui/badge";
 import {
   EmptyState,
   ErrorState,
@@ -25,12 +26,13 @@ type Aba = "agenda" | "votacoes" | "senado";
 export function Agenda() {
   const hoje = startOfDay();
   const [aba, setAba] = useState<Aba>("agenda");
+  const [janela, setJanela] = useState<"proximas" | "realizadas">("proximas");
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const eventosQ = useEventos({
-    dataInicio: isoDate(hoje),
+    dataInicio: isoDate(addDays(hoje, -21)),
     dataFim: isoDate(addDays(hoje, 21)),
-    itens: 60,
+    itens: 100,
   });
   const votacoesQ = useVotacoes({
     dataInicio: isoDate(addDays(hoje, -90)),
@@ -40,13 +42,19 @@ export function Agenda() {
   const senadoQ = useSenadoVotacoes();
 
   const eventos = useMemo(() => {
-    return (eventosQ.data ?? [])
-      .filter((e) => new Date(e.inicio).getTime() >= Date.now() - 60 * 60 * 1000)
+    const now = Date.now();
+    const list = eventosQ.data ?? [];
+    const proximas = list
+      .filter((e) => new Date(e.inicio).getTime() >= now - 60 * 60 * 1000)
       .sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime());
-  }, [eventosQ.data]);
+    const realizadas = list
+      .filter((e) => new Date(e.inicio).getTime() < now)
+      .sort((a, b) => new Date(b.inicio).getTime() - new Date(a.inicio).getTime());
+    return janela === "proximas" ? proximas : realizadas;
+  }, [eventosQ.data, janela]);
 
   const deliberativos = eventos.filter(
-    (e) => /deliberativa|sess[ãa]o/i.test(e.tipo)
+    (e) => /deliberativa/i.test(e.tipo) && !/n[ãa]o deliberativa/i.test(e.tipo)
   );
   const votacoes = votacoesQ.data?.items ?? [];
   const senadoVotos = (senadoQ.data ?? []).slice(0, 40);
@@ -87,22 +95,41 @@ export function Agenda() {
         />
       </div>
 
-      <div className="seg">
-        {(
-          [
-            { id: "agenda", label: "Próximas sessões" },
-            { id: "votacoes", label: "Votações · Câmara" },
-            { id: "senado", label: "Votações · Senado" },
-          ] as { id: Aba; label: string }[]
-        ).map((opt) => (
-          <button
-            key={opt.id}
-            data-active={aba === opt.id}
-            onClick={() => setAba(opt.id)}
-          >
-            {opt.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="seg">
+          {(
+            [
+              { id: "agenda", label: "Sessões" },
+              { id: "votacoes", label: "Votações · Câmara" },
+              { id: "senado", label: "Votações · Senado" },
+            ] as { id: Aba; label: string }[]
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              data-active={aba === opt.id}
+              onClick={() => setAba(opt.id)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {aba === "agenda" && (
+          <div className="seg">
+            <button
+              data-active={janela === "proximas"}
+              onClick={() => setJanela("proximas")}
+            >
+              Próximas
+            </button>
+            <button
+              data-active={janela === "realizadas"}
+              onClick={() => setJanela("realizadas")}
+            >
+              Já realizadas
+            </button>
+          </div>
+        )}
       </div>
 
       {aba === "agenda" && (
@@ -114,8 +141,16 @@ export function Agenda() {
           ) : eventos.length === 0 ? (
             <EmptyState
               icon={CalendarClock}
-              title="Nenhuma sessão agendada"
-              description="A Câmara ainda não publicou eventos para os próximos 21 dias. As sessões costumam ser divulgadas alguns dias antes."
+              title={
+                janela === "proximas"
+                  ? "Nenhuma sessão agendada"
+                  : "Nenhuma sessão realizada no período"
+              }
+              description={
+                janela === "proximas"
+                  ? "A Câmara ainda não publicou eventos para os próximos 21 dias. As sessões costumam ser divulgadas alguns dias antes."
+                  : "Não há sessões registradas nos últimos 21 dias."
+              }
             />
           ) : (
             eventos.map((e) => (
@@ -183,7 +218,10 @@ function AgendaEvento({
   onToggle: () => void;
 }) {
   const pautaQ = useEventoPauta(expanded ? evento.id.replace(/^camara-/, "") : undefined);
-  const pauta = pautaQ.data ?? [];
+  const [soVotados, setSoVotados] = useState(false);
+  const pauta = useMemo(() => pautaQ.data ?? [], [pautaQ.data]);
+  const votadosCount = pauta.filter((p) => p.votado).length;
+  const visible = soVotados ? pauta.filter((p) => p.votado) : pauta;
 
   return (
     <div>
@@ -207,27 +245,57 @@ function AgendaEvento({
               Pauta ainda não publicada para esta sessão.
             </p>
           ) : (
-            pauta.map((item, i) => (
-              <div
-                key={`${item.id}-${i}`}
-                className="surface flex items-start gap-3 p-3"
-              >
-                <span className="tn mt-0.5 w-5 shrink-0 text-right text-[11px] text-fg-5">
-                  {i + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[12px] font-medium text-fg-2">
-                      {item.sigla}
-                    </span>
-                    <StatusBadge status={item.status} maxLength={40} />
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-[11.5px] leading-relaxed text-fg-4">
-                    {item.ementa}
-                  </p>
+            <>
+              {votadosCount > 0 && (
+                <div className="seg mb-2">
+                  <button
+                    data-active={!soVotados}
+                    onClick={() => setSoVotados(false)}
+                  >
+                    Toda a pauta
+                  </button>
+                  <button
+                    data-active={soVotados}
+                    onClick={() => setSoVotados(true)}
+                  >
+                    Já votados ({votadosCount})
+                  </button>
                 </div>
-              </div>
-            ))
+              )}
+              {visible.length === 0 ? (
+                <p className="py-2 text-[11px] text-fg-5">
+                  Nenhum item já votado nesta sessão.
+                </p>
+              ) : (
+                visible.map((item, i) => (
+                  <div
+                    key={`${item.id}-${i}`}
+                    className="surface flex items-start gap-3 p-3"
+                  >
+                    <span className="tn mt-0.5 w-5 shrink-0 text-right text-[11px] text-fg-5">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[12px] font-medium text-fg-2">
+                          {item.sigla}
+                        </span>
+                        {item.votado && (
+                          <Badge tone="success">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Já votado
+                          </Badge>
+                        )}
+                        <StatusBadge status={item.status} maxLength={40} />
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[11.5px] leading-relaxed text-fg-4">
+                        {item.ementa}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </>
           )}
         </div>
       )}

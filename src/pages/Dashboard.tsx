@@ -14,6 +14,7 @@ import {
   useEventos,
   usePecCounts,
   useProposicoes,
+  useProposicoesVotadas,
   useVotacoes,
   useVotacoesMensais,
 } from "@/hooks/useCamara";
@@ -125,6 +126,26 @@ export function Dashboard() {
   const hemiVotos =
     hemiIndex >= 0 ? votosCandidatos[hemiIndex].data ?? [] : [];
   const hemiVotacao = hemiIndex >= 0 ? votacoes[hemiIndex] : undefined;
+
+  // "Já votada" flags for the recent-PEC preview.
+  const pecIds = useMemo(
+    () => pecsRecentes.filter((p) => p.casa === "camara").map((p) => p.id),
+    [pecsRecentes]
+  );
+  const pecsVotadasQ = useProposicoesVotadas(pecIds);
+  const pecsVotedIds = useMemo(
+    () =>
+      new Set(
+        pecsRecentes
+          .filter((p) =>
+            p.casa === "camara"
+              ? pecsVotadasQ.map.get(p.id) ?? false
+              : /aprovad|rejeitad|promulgad/i.test(p.status ?? "")
+          )
+          .map((p) => p.id)
+      ),
+    [pecsRecentes, pecsVotadasQ.map]
+  );
 
   const distribuicaoDep = useMemo(
     () => distributionBy(deputados, (d) => d.partido, 8),
@@ -283,6 +304,7 @@ export function Dashboard() {
               <ProposicoesList
                 items={pecsRecentes}
                 onOpen={setSelectedPec}
+                votedIds={pecsVotedIds}
                 className="space-y-2"
               />
             )}

@@ -119,6 +119,7 @@ export const VOTO_ORDER = [
   "Não",
   "Abstenção",
   "Obstrução",
+  "Artigo 17",
   "Art. 17",
 ] as const;
 
@@ -127,6 +128,7 @@ const VOTO_COLORS: Record<string, string> = {
   "Não": "#f87171",
   Abstenção: "#85827c",
   Obstrução: "#fbbf24",
+  "Artigo 17": "#60a5fa",
   "Art. 17": "#60a5fa",
 };
 

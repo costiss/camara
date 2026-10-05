@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Activity, FileText, Gavel, CalendarDays } from "lucide-react";
+import { Activity, CheckCircle2, FileText, Gavel, CalendarDays } from "lucide-react";
 import {
   useEventos,
   useProposicaoDetalhes,
@@ -19,6 +19,7 @@ import {
 } from "@/components/shared";
 import { ProposicaoDetail } from "@/components/detail/ProposicaoDetail";
 import { addDays, isoDate, startOfDay } from "@/lib/format";
+import { statusTone } from "@/lib/parties";
 import { cn } from "@/lib/utils";
 import type { Evento, Proposicao, Votacao } from "@/lib/types";
 
@@ -32,6 +33,7 @@ type FeedItem =
 export function Atividades() {
   const hoje = startOfDay();
   const [tipo, setTipo] = useState<Tipo>("tudo");
+  const [soVotados, setSoVotados] = useState(false);
   const [selectedPec, setSelectedPec] = useState<Proposicao | null>(null);
 
   const votacoesQ = useVotacoes({
@@ -98,10 +100,19 @@ export function Atividades() {
             ? props
             : eventos;
 
-    return filtro.sort(
+    const resultado = soVotados
+      ? filtro.filter((item) => {
+          if (item.kind === "votacao") return true;
+          if (item.kind === "evento") return false;
+          const tone = statusTone(item.proposicao.status);
+          return tone === "success" || tone === "danger";
+        })
+      : filtro;
+
+    return resultado.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [votacoes, senadoQ.data, proposicoes, statusById, eventosQ.data, tipo]);
+  }, [votacoes, senadoQ.data, proposicoes, statusById, eventosQ.data, tipo, soVotados]);
 
   const isLoading =
     votacoesQ.isLoading || proposicoesQ.isLoading || eventosQ.isLoading;
@@ -139,19 +150,32 @@ export function Atividades() {
         />
       </div>
 
-      <div className="seg">
-        {(
-          [
-            { id: "tudo", label: "Tudo" },
-            { id: "votacoes", label: "Votações" },
-            { id: "proposicoes", label: "Proposições" },
-            { id: "sessoes", label: "Sessões" },
-          ] as { id: Tipo; label: string }[]
-        ).map((opt) => (
-          <button key={opt.id} data-active={tipo === opt.id} onClick={() => setTipo(opt.id)}>
-            {opt.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="seg">
+          {(
+            [
+              { id: "tudo", label: "Tudo" },
+              { id: "votacoes", label: "Votações" },
+              { id: "proposicoes", label: "Proposições" },
+              { id: "sessoes", label: "Sessões" },
+            ] as { id: Tipo; label: string }[]
+          ).map((opt) => (
+            <button key={opt.id} data-active={tipo === opt.id} onClick={() => setTipo(opt.id)}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setSoVotados((v) => !v)}
+          aria-pressed={soVotados}
+          className={cn(
+            "chip transition-colors",
+            soVotados && "border-green/40 bg-green/10 text-green"
+          )}
+        >
+          <CheckCircle2 className="h-3 w-3" />
+          Já votados
+        </button>
       </div>
 
       {isError ? (
@@ -183,6 +207,10 @@ export function Atividades() {
               <ProposicaoRow
                 key={`p-${item.proposicao.id}-${i}`}
                 p={item.proposicao}
+                voted={
+                  statusTone(item.proposicao.status) === "success" ||
+                  statusTone(item.proposicao.status) === "danger"
+                }
                 onOpen={setSelectedPec}
               />
             ) : (

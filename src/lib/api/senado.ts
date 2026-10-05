@@ -173,6 +173,7 @@ function mapVotacaoPlenario(v: RawVotacaoPlenario): Votacao {
     descricao: v.descricaoVotacao ?? "Votação",
     ementa: v.ementa,
     proposicao: v.identificacao,
+    materiaId: v.codigoMateria,
     aprovacao: null,
     placar: null,
   };

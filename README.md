@@ -34,6 +34,18 @@ surfaces, hairline borders, big serif figures, tabular numbers, restrained colou
 - **Métricas** — party and state distributions for both houses, PEC status
   breakdown, vote outcomes and historical series (PECs per year, votes per month).
 
+### Filtro "já votados"
+
+Every list of legislative items can be narrowed to what has already been voted:
+
+- **PECs** — `Todas / Já votadas / Ainda não votadas`, with a "Já votada" badge
+  (Câmara via `/proposicoes/{id}/votacoes`; Senado via situation text).
+- **Agenda** — sessions split into `Próximas / Já realizadas`, and each session's
+  pauta can be filtered to `Já votados`.
+- **Atividades** — a `Já votados` toggle keeps only votes and deliberated
+  propositions.
+- **Votação** — a `Já votados` toggle keeps only members with a recorded vote.
+
 Detail sheets expose the legislative history:
 
 - **PEC / proposição** — tramitação timeline, autoria and related votes (Câmara);

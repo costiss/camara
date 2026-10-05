@@ -102,6 +102,25 @@ export function useProposicaoVotacoes(id?: number | string) {
   });
 }
 
+/** Which Câmara propositions already have a recorded vote. */
+export function useProposicoesVotadas(ids: string[], enabled = true) {
+  const queries = useQueries({
+    queries: (enabled ? ids : []).map((id) => ({
+      queryKey: ["proposicao-votacoes", id],
+      queryFn: () => getProposicaoVotacoes(id),
+      staleTime: 10 * 60 * 1000,
+    })),
+  });
+  const map = new Map<string, boolean>();
+  if (enabled) {
+    ids.forEach((id, i) => map.set(id, (queries[i]?.data?.length ?? 0) > 0));
+  }
+  return {
+    map,
+    isLoading: enabled && queries.some((q) => q.isLoading),
+  };
+}
+
 export function useProposicoesPorAutor(id?: number | string) {
   return useQuery({
     queryKey: ["proposicoes-autor", id],

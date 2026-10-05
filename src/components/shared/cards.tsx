@@ -1,8 +1,9 @@
-import { Calendar, ChevronRight, FileText, MapPin, Gavel, Clock } from "lucide-react";
+import { Calendar, CheckCircle2, ChevronRight, FileText, MapPin, Gavel, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Evento, Parlamentar, Proposicao, Votacao } from "@/lib/types";
 import { formatDate, formatDateTime, formatTime } from "@/lib/format";
 import { partyColor, withAlpha } from "@/lib/parties";
+import { Badge } from "@/components/ui/badge";
 import { AprovacaoBadge, MemberAvatar, PartyTag, StatusBadge } from "./badges";
 import { HouseTag } from "./primitives";
 import type { Placar } from "@/lib/types";
@@ -10,10 +11,12 @@ import type { Placar } from "@/lib/types";
 export function ProposicaoRow({
   p,
   onOpen,
+  voted,
   className,
 }: {
   p: Proposicao;
   onOpen?: (p: Proposicao) => void;
+  voted?: boolean;
   className?: string;
 }) {
   const interactive = !!onOpen;
@@ -42,6 +45,12 @@ export function ProposicaoRow({
           <span className="tn text-[13px] font-semibold text-fg">{p.sigla}</span>
           <HouseTag casa={p.casa} />
           {p.status && <StatusBadge status={p.status} maxLength={40} />}
+          {voted && (
+            <Badge tone="success">
+              <CheckCircle2 className="h-3 w-3" />
+              Já votada
+            </Badge>
+          )}
         </div>
         <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-fg-3">
           {p.ementa}

@@ -18,7 +18,7 @@ import { createLimiter, getJson, getPaged, hasRel, type PagedResult } from "./ht
 const BASE = "https://dadosabertos.camara.leg.br/api/v2";
 
 /** Cap concurrent Câmara requests to stay under its rate limiter. */
-const limit = createLimiter(5);
+const limit = createLimiter(3);
 const getApi = <T>(url: string, init?: RequestInit) => limit(() => getJson<T>(url, init));
 const getApiPaged = <T>(url: string) => limit(() => getPaged<T>(url));
 
@@ -281,7 +281,9 @@ function mapEvento(e: RawEvento): Evento {
 }
 
 function mapPautaItem(item: RawPautaItem): Proposicao {
-  if (item.proposicao_) return mapProposicao(item.proposicao_);
+  if (item.proposicao_) {
+    return { ...mapProposicao(item.proposicao_), votado: !!item.uriVotacao };
+  }
   return {
     id: `pauta-${item.titulo}`,
     casa: "camara",
@@ -292,6 +294,7 @@ function mapPautaItem(item: RawPautaItem): Proposicao {
     ementa: item.situacaoItem ?? item.titulo,
     orgao: item.titulo,
     status: item.situacaoItem ?? undefined,
+    votado: !!item.uriVotacao || !!item.situacaoItem,
   };
 }
 

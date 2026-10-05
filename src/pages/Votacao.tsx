@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   ArrowLeft,
+  CheckCircle2,
   ExternalLink,
   Gavel,
   Info,
@@ -37,6 +38,7 @@ import { navigate, useDebouncedValue } from "@/hooks/useUi";
 import { partyColor, voteColor, voteRank, voteTone } from "@/lib/parties";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { pct } from "@/lib/aggregate";
+import { cn } from "@/lib/utils";
 import type { Parlamentar, VotoParlamentar } from "@/lib/types";
 
 type ColorBy = "voto" | "partido";
@@ -63,6 +65,7 @@ export function Votacao({ id }: { id: string }) {
   const [colorBy, setColorBy] = useState<ColorBy>("voto");
   const [groupBy, setGroupBy] = useState<GroupBy>("voto");
   const [votoFilter, setVotoFilter] = useState("todos");
+  const [soVotados, setSoVotados] = useState(false);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Parlamentar | null>(null);
   const debounced = useDebouncedValue(search, 200);
@@ -107,14 +110,15 @@ export function Votacao({ id }: { id: string }) {
     const q = debounced.trim().toLowerCase();
     return votos.filter((v) => {
       const okVoto = votoFilter === "todos" || v.voto === votoFilter;
+      const okRegistrado = !soVotados || v.voto.trim() !== "";
       const okSearch =
         !q ||
         v.nome.toLowerCase().includes(q) ||
         v.partido.toLowerCase().includes(q) ||
         v.uf.toLowerCase().includes(q);
-      return okVoto && okSearch;
+      return okVoto && okRegistrado && okSearch;
     });
-  }, [votos, votoFilter, debounced]);
+  }, [votos, votoFilter, soVotados, debounced]);
 
   const groups = useMemo(() => {
     const byName = (a: VotoParlamentar, b: VotoParlamentar) =>
@@ -408,6 +412,17 @@ export function Votacao({ id }: { id: string }) {
                   <SelectItem value="lista">Lista única</SelectItem>
                 </SelectContent>
               </Select>
+              <button
+                onClick={() => setSoVotados((v) => !v)}
+                aria-pressed={soVotados}
+                className={cn(
+                  "chip shrink-0 transition-colors",
+                  soVotados && "border-green/40 bg-green/10 text-green"
+                )}
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                Já votados
+              </button>
             </div>
 
             {groups.length === 0 ? (

@@ -11,11 +11,13 @@ export function ProposicoesList({
   items,
   onOpen,
   enrichStatus = true,
+  votedIds,
   className,
 }: {
   items: Proposicao[];
   onOpen?: (p: Proposicao) => void;
   enrichStatus?: boolean;
+  votedIds?: Set<string>;
   className?: string;
 }) {
   const missing = enrichStatus
@@ -32,6 +34,7 @@ export function ProposicoesList({
         <ProposicaoRow
           key={p.id}
           p={{ ...p, status: p.status ?? statusById.get(p.id) }}
+          voted={p.votado ?? votedIds?.has(p.id)}
           onOpen={onOpen}
         />
       ))}
