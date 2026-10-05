@@ -58,6 +58,8 @@ export function VotacoesView({ votacaoId, onSelectMember }: {
   );
 
   const [uf, selectUf] = useQueryParam("uf");
+  const [nominal, setNominal] = useQueryParam("nominal", "1");
+  const soNominais = nominal !== "0";
   const activeUf = uf || null;
   const rollCall = query.get("chamada") === "1";
   const setRollCall = (aberta: boolean) =>
@@ -97,7 +99,15 @@ export function VotacoesView({ votacaoId, onSelectMember }: {
       {votacao && (
         <PartyBreakdown assentos={assentos} orientacoes={orientacoes} activeUf={activeUf} onClearUf={() => selectUf(null)} />
       )}
-      <DeliberacaoFeed deliberacoes={feed.deliberacoes} currentId={id} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} />
+      <DeliberacaoFeed
+        deliberacoes={feed.deliberacoes}
+        currentId={id}
+        isLoading={feed.isLoading}
+        isError={feed.isError}
+        onRetry={feed.refetch}
+        soNominais={soNominais}
+        onSoNominais={(ativo) => setNominal(ativo ? "1" : "0")}
+      />
     </>
   );
 

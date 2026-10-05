@@ -61,6 +61,8 @@ export function DeliberacaoFeed({
   isError,
   onRetry,
   casa,
+  soNominais,
+  onSoNominais,
   limit = 14,
   className,
 }: {
@@ -71,22 +73,39 @@ export function DeliberacaoFeed({
   isError?: boolean;
   onRetry?: () => void;
   casa?: Casa;
+  /** When set, shows a toggle that keeps only deliberations with a roll-call vote. */
+  soNominais?: boolean;
+  onSoNominais?: (ativo: boolean) => void;
   limit?: number;
   className?: string;
 }) {
-  const shown = deliberacoes.slice(0, limit);
+  const filtradas = soNominais ? deliberacoes.filter((d) => d.votacoes.some((v) => v.nominal)) : deliberacoes;
+  const shown = filtradas.slice(0, limit);
   return (
     <section className={cn("card", className)} aria-label={title}>
       <div className="card-head">
         <h2>{title}</h2>
         <span className="meta">Plenário · 90 dias</span>
       </div>
+      {onSoNominais && (
+        <label className="-mt-1 mb-2 inline-flex cursor-pointer items-center gap-2 text-[12px] text-fg-3">
+          <input
+            type="checkbox"
+            className="accent-[var(--color-fg)]"
+            checked={!!soNominais}
+            onChange={(e) => onSoNominais(e.target.checked)}
+          />
+          Só com votação nominal
+        </label>
+      )}
       {isLoading ? (
         <LoadingRows rows={5} height={56} />
       ) : isError ? (
         <ErrorState compact title="Não foi possível carregar as votações" onRetry={onRetry} />
       ) : shown.length === 0 ? (
-        <p className="py-6 text-center text-[12px] text-fg-4">Nenhuma votação em plenário no período.</p>
+        <p className="py-6 text-center text-[12px] text-fg-4">
+          Nenhuma votação {soNominais ? "nominal " : ""}em plenário no período.
+        </p>
       ) : (
         <div className="-mx-2 flex flex-col">
           {shown.map((d, i) => (
@@ -96,9 +115,9 @@ export function DeliberacaoFeed({
           ))}
         </div>
       )}
-      {!isLoading && deliberacoes.length > limit && (
-        <a href={routeHref("lista", undefined, { casa })} className="btn btn-sm btn-block mt-3 no-underline">
-          Ver todas as {deliberacoes.length} na lista
+      {!isLoading && filtradas.length > limit && (
+        <a href={routeHref("lista", undefined, { casa, nominal: soNominais ? "1" : null })} className="btn btn-sm btn-block mt-3 no-underline">
+          Ver todas as {filtradas.length} na lista
         </a>
       )}
     </section>

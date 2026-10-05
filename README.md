@@ -39,7 +39,7 @@ Defaults are left out of the URL.
 
 | Route | Parameters |
 | --- | --- |
-| `#/votacoes/<id>` | `uf`, `modo=plenario`, `chamada=1` (roll-call open), `voto` (`sim`, `nao`, …), `nome`, `data` (Senate session date) |
+| `#/votacoes/<id>` | `uf`, `modo=plenario`, `nominal=0` (feed shows every vote), `chamada=1` (roll-call open), `voto` (`sim`, `nao`, …), `nome`, `data` (Senate session date) |
 | `#/lista` | `casa=camara\|senado`, `periodo=30d\|90d\|<ano>`, `tipo` (`PEC`, `PL`, …), `resultado=aprovada\|rejeitada\|outros`, `nominal=1`, `q`, `ordem=antigas`, `pagina` |
 | `#/camara`, `#/senado` | `uf`, `partido`, `q` |
 | `#/agenda` | `periodo=realizados`, `tipo=plenario\|comissoes` |
