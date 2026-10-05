@@ -55,8 +55,8 @@ export function AgendaView() {
   const hoje = startOfDay(new Date(agora));
   const [janela, setJanela] = useState<Janela>("proximas");
   const [tipo, setTipo] = useState<Tipo>("todos");
-  const proximosQ = useEventos({ dataInicio: isoDate(hoje), dataFim: isoDate(addDays(hoje, 21)), itens: 100, ordem: "ASC" });
-  const realizadosQ = useEventos({ dataInicio: isoDate(addDays(hoje, -21)), dataFim: isoDate(hoje), itens: 100, ordem: "DESC" });
+  const proximosQ = useEventos({ dataInicio: isoDate(hoje), dataFim: isoDate(addDays(hoje, 21)), ordem: "ASC" });
+  const realizadosQ = useEventos({ dataInicio: isoDate(addDays(hoje, -21)), dataFim: isoDate(hoje), ordem: "DESC" });
   const eventosQ = janela === "proximas" ? proximosQ : realizadosQ;
   const feed = useDeliberacoes();
   const todos = useMemo(() => eventosQ.data ?? [], [eventosQ.data]);
@@ -117,7 +117,7 @@ export function AgendaView() {
       left={<ProximaSessao eventos={proximos} isLoading={proximosQ.isLoading} agora={agora} />}
       center={center}
       dock={<VotesDock deliberacoes={feed.deliberacoes} />}
-      right={<DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} />}
+      right={<DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} />}
     />
   );
 }

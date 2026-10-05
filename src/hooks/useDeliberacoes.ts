@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getProposicoesPorIds, PLENARIO_CAMARA } from "@/lib/api";
+import { getProposicoesPorIds } from "@/lib/api";
 import { addDays, isoDate } from "@/lib/format";
 import { DeliberacaoBuilder, type Deliberacao } from "@/lib/deliberacoes";
 import type { Casa, Proposicao, Votacao } from "@/lib/types";
-import { useVotacoes } from "./useCamara";
+import { useVotacoesPlenario } from "./useCamara";
 import { useSenadoVotacoes } from "./useSenado";
 
 const JANELA_DIAS = 89;
-const MAX_ROTULOS = 100;
+const MAX_ROTULOS = 400;
 
 /** Resolves Câmara proposition ids (vote prefixes) to their sigla/ementa in one request. */
 export function useProposicoesPorId(ids: string[]) {
@@ -37,15 +37,10 @@ export interface DeliberacoesResult {
 /** Floor votes of both houses over the last ~90 days, grouped by deliberation. */
 export function useDeliberacoes(casa: Casa | "ambas" = "ambas"): DeliberacoesResult {
   const [hoje] = useState(() => new Date());
-  const camaraQ = useVotacoes({
-    dataInicio: isoDate(addDays(hoje, -JANELA_DIAS)),
-    dataFim: isoDate(hoje),
-    itens: 100,
-    idOrgao: PLENARIO_CAMARA,
-  });
+  const camaraQ = useVotacoesPlenario(isoDate(addDays(hoje, -JANELA_DIAS)), isoDate(hoje));
   const senadoQ = useSenadoVotacoes();
 
-  const camara = useMemo(() => (casa === "senado" ? [] : (camaraQ.data?.items ?? [])), [casa, camaraQ.data]);
+  const camara = useMemo(() => (casa === "senado" ? [] : (camaraQ.data ?? [])), [casa, camaraQ.data]);
   const senado = useMemo(() => (casa === "camara" ? [] : (senadoQ.data ?? [])), [casa, senadoQ.data]);
 
   const ids = useMemo(
@@ -64,7 +59,7 @@ export function useDeliberacoes(casa: Casa | "ambas" = "ambas"): DeliberacoesRes
   return {
     deliberacoes,
     isLoading: (camaraOn && camaraQ.isLoading) || (senadoOn && senadoQ.isLoading),
-    isError: (camaraOn && camaraQ.isError) && (!senadoOn || senadoQ.isError),
+    isError: (!camaraOn || camaraQ.isError) && (!senadoOn || senadoQ.isError),
     refetch: () => {
       camaraQ.refetch();
       senadoQ.refetch();

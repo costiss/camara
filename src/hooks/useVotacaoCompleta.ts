@@ -64,7 +64,7 @@ export function useVotacaoCompleta(id?: string): VotacaoCompleta {
     tally,
     orientacoes: orientQ.data ?? [],
     isLoading: isCamara ? detalheQ.isLoading || votosQ.isLoading : senadoQ.isLoading,
-    isError: isCamara ? detalheQ.isError : senadoQ.isError,
+    isError: isCamara ? detalheQ.isError || votosQ.isError : senadoQ.isError,
     refetch: () => {
       detalheQ.refetch();
       votosQ.refetch();

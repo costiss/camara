@@ -15,6 +15,7 @@ import {
   getProposicoesPorAutor,
   getTramitacoes,
   getVotacao,
+  getVotacoesPlenario,
   turnoDe,
   getVotacaoOrientacoes,
   getVotacaoVotos,
@@ -187,10 +188,17 @@ export function useVotacao(id?: string) {
   });
 }
 
+export function useVotacoesPlenario(dataInicio: string, dataFim: string) {
+  return useQuery({
+    queryKey: ["votacoes-plenario", dataInicio, dataFim],
+    queryFn: () => getVotacoesPlenario(dataInicio, dataFim),
+    staleTime: STALE,
+  });
+}
+
 export function useEventos(query: {
   dataInicio: string;
   dataFim: string;
-  itens?: number;
   ordem?: "ASC" | "DESC";
 }) {
   return useQuery({

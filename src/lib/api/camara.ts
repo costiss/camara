@@ -462,6 +462,15 @@ export async function getVotacoes(q: {
   };
 }
 
+/** Every floor vote in a window of up to three months, newest first. */
+export async function getVotacoesPlenario(dataInicio: string, dataFim: string): Promise<Votacao[]> {
+  const dados = await paginarTudo<RawVotacao>(
+    `${BASE}/votacoes?idOrgao=${PLENARIO_CAMARA}&dataInicio=${dataInicio}&dataFim=${dataFim}&ordem=DESC&ordenarPor=dataHoraRegistro`,
+    20
+  );
+  return dados.map(mapVotacao);
+}
+
 export async function getVotacaoVotos(id: string): Promise<VotoParlamentar[]> {
   const { dados } = await getApi<{ dados: RawVoto[] }>(
     `${BASE}/votacoes/${id}/votos`
@@ -504,17 +513,15 @@ export async function getVotacaoOrientacoes(id: string): Promise<OrientacaoBanca
 export async function getEventos(q: {
   dataInicio: string;
   dataFim: string;
-  itens?: number;
   ordem?: "ASC" | "DESC";
 }): Promise<Evento[]> {
   const url = new URL(`${BASE}/eventos`);
   url.searchParams.set("dataInicio", q.dataInicio);
   url.searchParams.set("dataFim", q.dataFim);
-  url.searchParams.set("itens", String(q.itens ?? 50));
   url.searchParams.set("ordem", q.ordem ?? "ASC");
   url.searchParams.set("ordenarPor", "dataHoraInicio");
-  const { dados } = await getApi<{ dados: RawEvento[] }>(url.toString());
-  return (dados ?? []).map(mapEvento);
+  const dados = await paginarTudo<RawEvento>(url.toString(), 10);
+  return dados.map(mapEvento);
 }
 
 export async function getEventoPauta(eventoId: number | string): Promise<Proposicao[]> {

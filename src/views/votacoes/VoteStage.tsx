@@ -17,7 +17,7 @@ function useMapData(assentos: VotoParlamentar[]) {
       out[g.chave] = {
         fill: corDaDisputa(sim, nao),
         value: pct === null ? "—" : `${pct}%`,
-        title: `${g.chave}: ${sim} Sim, ${nao} Não, ${g.tally.ausentes + g.tally.counts.ausente} ausentes de ${g.membros}`,
+        title: `${g.chave}: ${sim} Sim, ${nao} Não, ${g.tally.ausentes} ausentes de ${g.membros}`,
       };
     }
     return out;

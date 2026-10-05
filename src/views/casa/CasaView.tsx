@@ -140,7 +140,7 @@ export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember:
       right={
         <>
           {!q.isLoading && <BancadasCard membros={membros} partido={partido} onPartido={setPartido} />}
-          <DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} limit={8} />
+          <DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} limit={8} />
         </>
       }
     />

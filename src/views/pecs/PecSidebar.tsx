@@ -2,10 +2,10 @@ import { usePecCounts } from "@/hooks/useCamara";
 import { routeHref } from "@/hooks/useUi";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { Proposicao } from "@/lib/types";
-import { LoadingRows } from "@/components/shared";
+import { ErrorState, LoadingRows } from "@/components/shared";
 import { cn } from "@/lib/utils";
 
-export function PecHero({ ano, anos, onAno, totalCamara, totalSenado, votadas, loadingVotadas }: {
+export function PecHero({ ano, anos, onAno, totalCamara, totalSenado, votadas, loadingVotadas, erroVotadas }: {
   ano: number;
   anos: number[];
   onAno: (a: number) => void;
@@ -13,6 +13,7 @@ export function PecHero({ ano, anos, onAno, totalCamara, totalSenado, votadas, l
   totalSenado: number | null;
   votadas: Proposicao[];
   loadingVotadas: boolean;
+  erroVotadas: boolean;
 }) {
   const segundo = votadas.filter((p) => /aprovada em 2º/i.test(p.status ?? "")).length;
   const primeiro = votadas.filter((p) => /aprovada em 1º/i.test(p.status ?? "")).length;
@@ -28,7 +29,7 @@ export function PecHero({ ano, anos, onAno, totalCamara, totalSenado, votadas, l
         </div>
       </div>
       <h1 id="pec-title" className="manchete mt-4">
-        {loadingVotadas ? "Apurando votações…" : (
+        {loadingVotadas ? "Apurando votações…" : erroVotadas ? "Não foi possível apurar as votações" : (
           <><span className="text-green">{votadas.length} {votadas.length === 1 ? "PEC votada" : "PECs votadas"}</span> no Plenário da Câmara em {ano}</>
         )}
       </h1>
@@ -80,14 +81,22 @@ export function PecsPorAno({ anos }: { anos: number[] }) {
   );
 }
 
-export function PecsVotadasCard({ ano, votadas, isLoading }: { ano: number; votadas: Proposicao[]; isLoading: boolean }) {
+export function PecsVotadasCard({ ano, votadas, isLoading, isError, onRetry }: {
+  ano: number;
+  votadas: Proposicao[];
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+}) {
   return (
     <section className="card" aria-label={`PECs votadas em ${ano}`}>
       <div className="card-head">
         <h2>Votadas em {ano}</h2>
         <span className="meta">Plenário da Câmara</span>
       </div>
-      {isLoading ? <LoadingRows rows={4} height={44} /> : votadas.length === 0 ? (
+      {isLoading ? <LoadingRows rows={4} height={44} /> : isError ? (
+        <ErrorState compact title="Não foi possível apurar as votações" onRetry={onRetry} />
+      ) : votadas.length === 0 ? (
         <p className="py-4 text-center text-[12px] text-fg-4">Nenhuma PEC teve votação de mérito em {ano}.</p>
       ) : (
         <ol className="flex flex-col">

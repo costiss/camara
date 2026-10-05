@@ -42,7 +42,7 @@ export function PecsView() {
   const itens = useMemo(() => {
     const status = new Map(detalhes.map((d) => [d.data?.id, d.data?.status]));
     const camara = (camaraQ.data?.items ?? []).map((p) => ({ ...p, status: status.get(p.id) ?? p.status }));
-    const senado = pagina === 1 ? (senadoQ.data ?? []) : [];
+    const senado = pagina === 1 || casa === "senado" ? (senadoQ.data ?? []) : [];
     const base = casa === "camara" ? camara : casa === "senado" ? senado : [...camara, ...senado];
     const votada = (p: Proposicao) =>
       p.casa === "camara" ? (votadasMap.get(p.id) ?? false) : /aprovad|promulgad/i.test(p.status ?? "");
@@ -63,7 +63,7 @@ export function PecsView() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="switch switch-sm" role="group" aria-label="Casa">
           {(["todas", "camara", "senado"] as const).map((c) => (
-            <button key={c} type="button" aria-pressed={casa === c} onClick={() => setCasa(c)}>
+            <button key={c} type="button" aria-pressed={casa === c} onClick={() => { setCasa(c); setPagina(1); }}>
               {c === "todas" ? "Ambas" : c === "camara" ? "Câmara" : "Senado"}
             </button>
           ))}
@@ -127,6 +127,7 @@ export function PecsView() {
               totalSenado={senadoQ.data?.length ?? null}
               votadas={votadasAno}
               loadingVotadas={votadasQ.isLoading}
+              erroVotadas={votadasQ.isError}
             />
             <PecsPorAno anos={Array.from({ length: 8 }, (_, i) => anoAtual - i)} />
           </>
@@ -134,8 +135,8 @@ export function PecsView() {
         center={center}
         right={
           <>
-            <PecsVotadasCard ano={ano} votadas={votadasAno} isLoading={votadasQ.isLoading} />
-            <DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} limit={6} />
+            <PecsVotadasCard ano={ano} votadas={votadasAno} isLoading={votadasQ.isLoading} isError={votadasQ.isError} onRetry={() => votadasQ.refetch()} />
+            <DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} limit={6} />
           </>
         }
       />

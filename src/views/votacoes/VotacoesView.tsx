@@ -77,7 +77,7 @@ export function VotacoesView({ votacaoId, onSelectMember }: {
       {votacao && (
         <PartyBreakdown assentos={assentos} orientacoes={orientacoes} activeUf={activeUf} onClearUf={() => selectUf(null)} />
       )}
-      <DeliberacaoFeed deliberacoes={feed.deliberacoes} currentId={id} isLoading={feed.isLoading} />
+      <DeliberacaoFeed deliberacoes={feed.deliberacoes} currentId={id} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} />
     </>
   );
 

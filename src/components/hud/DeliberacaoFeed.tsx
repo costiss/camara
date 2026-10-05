@@ -4,7 +4,7 @@ import { resultadoVotacao } from "@/lib/votos";
 import type { Deliberacao } from "@/lib/deliberacoes";
 import type { StatusTone } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { LoadingRows } from "@/components/shared";
+import { ErrorState, LoadingRows } from "@/components/shared";
 
 const TONE_COR: Record<StatusTone, string> = {
   success: "var(--color-green)",
@@ -59,6 +59,8 @@ export function DeliberacaoFeed({
   deliberacoes,
   currentId,
   isLoading,
+  isError,
+  onRetry,
   limit = 14,
   className,
 }: {
@@ -66,6 +68,8 @@ export function DeliberacaoFeed({
   deliberacoes: Deliberacao[];
   currentId?: string;
   isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   limit?: number;
   className?: string;
 }) {
@@ -79,6 +83,8 @@ export function DeliberacaoFeed({
       </div>
       {isLoading ? (
         <LoadingRows rows={5} height={56} />
+      ) : isError ? (
+        <ErrorState compact title="Não foi possível carregar as votações" onRetry={onRetry} />
       ) : shown.length === 0 ? (
         <p className="py-6 text-center text-[12px] text-fg-4">Nenhuma votação em plenário no período.</p>
       ) : (

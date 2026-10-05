@@ -39,9 +39,17 @@ function currentHash(): string {
   return window.location.hash.replace(/^#\/?/, "").trim();
 }
 
+function decodificar(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 export function parseRoute(hash: string): Route {
   const [head, ...rest] = hash.split("/");
-  const param = rest.length ? decodeURIComponent(rest.join("/")) : undefined;
+  const param = rest.length ? decodificar(rest.join("/")) : undefined;
   if ((VIEWS as string[]).includes(head)) return { view: head as View, param };
   if (LEGADO[head]) return { view: LEGADO[head], param };
   return { view: "votacoes" };
