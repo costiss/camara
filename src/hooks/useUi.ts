@@ -99,6 +99,11 @@ class HashRouter {
     if (window.location.hash !== href) window.location.hash = href.slice(1);
   }
 
+  /** Navigates without adding a history entry, so Back skips it. */
+  substituir(href: string) {
+    if (window.location.hash !== href) window.location.replace(href);
+  }
+
   patch(query: Query) {
     const atual = parseRoute(this.hash());
     const next = new URLSearchParams(atual.query);

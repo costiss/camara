@@ -1,34 +1,19 @@
 import { useMemo } from "react";
-import { ArrowLeft, List } from "lucide-react";
 import { DeliberacaoFeed } from "@/components/hud/DeliberacaoFeed";
 import { HudGrid } from "@/components/hud/HudGrid";
 import { VotesDock } from "@/components/hud/VotesDock";
 import { ErrorState } from "@/components/shared";
-import { HeroSkeleton, PartyBreakdownSkeleton, StageSkeleton } from "@/components/hud/skeletons";
+import { HeroSkeleton, MapaCantoSkeleton, PartyBreakdownSkeleton } from "@/components/hud/skeletons";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
-import { routeHref, router, useQueryParam, useRoute } from "@/hooks/useUi";
+import { router, useQueryParam, useRoute } from "@/hooks/useUi";
 import type { Parlamentar } from "@/lib/types";
 import { DeliberacaoSteps } from "./DeliberacaoSteps";
 import { PartyBreakdown } from "./PartyBreakdown";
 import { RollCallSheet } from "./RollCallSheet";
 import { VoteHero } from "./VoteHero";
-import { VoteStage } from "./VoteStage";
-
-function VoltarLista({ veioDaLista }: { veioDaLista: boolean }) {
-  if (veioDaLista) {
-    return (
-      <button type="button" className="inline-flex items-center gap-1 self-start text-[12px] text-fg-3 hover:text-fg" onClick={() => window.history.back()}>
-        <ArrowLeft className="h-3.5 w-3.5" /> Voltar à lista
-      </button>
-    );
-  }
-  return (
-    <a href={routeHref("lista")} className="inline-flex items-center gap-1 self-start text-[12px] text-fg-3 no-underline hover:text-fg">
-      <List className="h-3.5 w-3.5" /> Escolher outra votação
-    </a>
-  );
-}
+import { MapaCanto } from "./MapaCanto";
+import { NavegacaoVotacao } from "./NavegacaoVotacao";
 
 export function VotacoesView({ votacaoId, onSelectMember }: {
   votacaoId?: string;
@@ -58,43 +43,43 @@ export function VotacoesView({ votacaoId, onSelectMember }: {
   const { votacao, assentos, tally, orientacoes } = completa;
   const carregando = (!id && feed.isLoading) || (!!id && completa.isLoading);
 
-  const voltar = <VoltarLista veioDaLista={query.get("de") === "lista"} />;
-  const left = carregando ? (
-    <>
-      {voltar}
-      <HeroSkeleton />
-    </>
-  ) : completa.isError || (!votacao && id) ? (
-    <div className="card">
-      <ErrorState compact title="Não foi possível carregar esta votação" onRetry={completa.refetch} />
-    </div>
-  ) : votacao ? (
-    <>
-      {voltar}
-      <VoteHero votacao={votacao} tally={tally} onOpenRollCall={() => setRollCall(true)} />
-      {!feed.isLoading && deliberacao && id && <DeliberacaoSteps deliberacao={deliberacao} currentId={id} />}
-    </>
-  ) : (
-    <div className="card">
-      <ErrorState compact title="Nenhuma votação recente" onRetry={feed.refetch} />
-    </div>
-  );
+  const navegaveis = useMemo(() => {
+    const nominais = feed.deliberacoes.filter((d) => d.votacoes.some((v) => v.nominal));
+    const filtradas = soNominais ? nominais : feed.deliberacoes;
+    return filtradas.some((d) => d.votacoes.some((v) => v.id === id)) ? filtradas : feed.deliberacoes;
+  }, [feed.deliberacoes, soNominais, id]);
 
-  const center = carregando || !votacao ? (
-    <StageSkeleton />
-  ) : (
-    <VoteStage votacao={votacao} assentos={assentos} tally={tally} activeUf={activeUf} onSelectUf={selectUf} />
-  );
+  const erro = !carregando && (completa.isError || (!votacao && !!id));
+  const vazio = !carregando && !id;
 
-  const right = (
-    <>
+  const center = (
+    <div className="flex flex-col gap-3">
+      <NavegacaoVotacao deliberacoes={navegaveis} currentId={id} />
       {carregando ? (
-        <PartyBreakdownSkeleton />
+        <>
+          <HeroSkeleton />
+          <PartyBreakdownSkeleton />
+        </>
+      ) : erro || vazio || !votacao ? (
+        <div className="card">
+          {vazio ? (
+            <ErrorState compact title="Nenhuma votação recente" onRetry={feed.refetch} />
+          ) : (
+            <ErrorState compact title="Não foi possível carregar esta votação" onRetry={completa.refetch} />
+          )}
+        </div>
       ) : (
-        votacao && (
+        <>
+          <VoteHero votacao={votacao} tally={tally} onOpenRollCall={() => setRollCall(true)} />
           <PartyBreakdown votacao={votacao} assentos={assentos} orientacoes={orientacoes} activeUf={activeUf} onClearUf={() => selectUf(null)} />
-        )
+        </>
       )}
+    </div>
+  );
+
+  const left = (
+    <>
+      {!carregando && !feed.isLoading && deliberacao && id && <DeliberacaoSteps deliberacao={deliberacao} currentId={id} />}
       <DeliberacaoFeed
         deliberacoes={feed.deliberacoes}
         currentId={id}
@@ -107,9 +92,16 @@ export function VotacoesView({ votacaoId, onSelectMember }: {
     </>
   );
 
+  const right = carregando || !votacao ? (
+    <MapaCantoSkeleton />
+  ) : (
+    <MapaCanto votacao={votacao} assentos={assentos} tally={tally} activeUf={activeUf} onSelectUf={selectUf} />
+  );
+
   return (
     <>
       <HudGrid
+        centroPrimeiro
         left={left}
         center={center}
         right={right}

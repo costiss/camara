@@ -1,43 +1,10 @@
-import { useMemo } from "react";
 import { useQueryEnum } from "@/hooks/useUi";
-import { BrazilMap, type UfDatum } from "@/components/hud/BrazilMap";
-import { Hemicycle, type Seat } from "@/components/shared";
-import { agruparVotos, corDaDisputa, ordenarPorEspectro, rankCategoria } from "@/lib/breakdown";
+import { BrazilMap } from "@/components/hud/BrazilMap";
+import { Hemicycle } from "@/components/shared";
 import { formatNumber } from "@/lib/format";
 import { CATEGORIA_COR, CATEGORIA_LABEL, CATEGORIA_ORDEM, resultadoVotacao, type VoteTally } from "@/lib/votos";
 import type { Votacao, VotoParlamentar } from "@/lib/types";
-
-type Modo = "mapa" | "plenario";
-const MODOS: readonly Modo[] = ["mapa", "plenario"];
-
-function useMapData(assentos: VotoParlamentar[]) {
-  return useMemo(() => {
-    const out: Record<string, UfDatum> = {};
-    for (const g of agruparVotos(assentos, (v) => v.uf)) {
-      const { sim, nao } = g.tally.counts;
-      const pct = sim + nao ? Math.round((sim / (sim + nao)) * 100) : null;
-      out[g.chave] = {
-        fill: corDaDisputa(sim, nao),
-        value: pct === null ? "—" : `${pct}%`,
-        title: `${g.chave}: ${sim} Sim, ${nao} Não, ${g.tally.ausentes} ausentes de ${g.membros}`,
-      };
-    }
-    return out;
-  }, [assentos]);
-}
-
-function useSeats(assentos: VotoParlamentar[], activeUf?: string | null): Seat[] {
-  return useMemo(
-    () =>
-      ordenarPorEspectro(assentos, (v) => rankCategoria(v.categoria)).map((v) => ({
-        id: v.parlamentarId,
-        color: CATEGORIA_COR[v.categoria],
-        title: `${v.nome} · ${v.partido}-${v.uf} · ${v.voto}${v.detalhe && v.categoria === "ausente" ? ` (${v.detalhe})` : ""}`,
-        dim: !!activeUf && v.uf !== activeUf,
-      })),
-    [assentos, activeUf]
-  );
-}
+import { MODOS, type Modo, useMapData, useSeats } from "./estagio";
 
 function Legenda({ tally, modo }: { tally: VoteTally; modo: Modo }) {
   if (modo === "mapa") {

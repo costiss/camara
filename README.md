@@ -19,12 +19,11 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
 ## Views
 
 - **Votações** (`#/votacoes/<id>`) — the latest nominal floor vote by default.
-  Headline card with Sim × Não, quorum (3/5 for PEC, absolute majority for PLP),
-  presence and absences; a map of % Sim per state or a hemicycle with every seat
-  (absent members included); how each party voted and its leader's orientation;
-  every vote of the same session; full roll-call; feed of both houses.
-- **Câmara / Senado** — composition: left/centre/right bar, seats by party,
-  map of the leading party per state (click a state to filter), bancadas and members.
+  The vote is the centre of the page: verdict, plain-language title, score,
+  required majority, what was being decided, and how each party voted. A bar
+  on top goes back to the list and steps to the next newer/older vote. The
+  left column is the menu (steps of this vote, latest votes); the map and the
+  hemicycle sit in a small corner card that expands into a dialog.
 - **Inspecionar** (`#/inspecionar/<id>`) — everything about one vote: what was
   voted, every vote category, quorum, each leader's orientation, a party or
   state table (with how faithfully each party followed its orientation) and
@@ -44,7 +43,7 @@ Defaults are left out of the URL.
 
 | Route | Parameters |
 | --- | --- |
-| `#/votacoes/<id>` | `uf`, `modo=plenario`, `nominal=0` (feed shows every vote), `chamada=1` (roll-call open), `voto` (`sim`, `nao`, …), `nome`, `data` (Senate session date) |
+| `#/votacoes/<id>` | `uf`, `modo=plenario`, `mapa=1` (map expanded), `nominal=0` (feed shows every vote), `chamada=1` (roll-call open), `voto` (`sim`, `nao`, …), `nome`, `data` (Senate session date) |
 | `#/inspecionar/<id>` | `voto`, `partido`, `uf`, `nome`, `contra=1` (voted against the party), `ordem=partido\|uf\|voto`, `grupo=estado`, `secao=votos\|grupos` (scrolls to that section), `data` |
 | `#/lista` | `casa=camara\|senado`, `periodo=30d\|90d\|<ano>`, `tipo` (`PEC`, `PL`, …), `resultado=aprovada\|rejeitada\|outros`, `nominal=1`, `q`, `ordem=antigas`, `pagina` |
 | `#/camara`, `#/senado` | `uf`, `partido`, `q` |

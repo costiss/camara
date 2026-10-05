@@ -138,6 +138,14 @@
   .hud-center {
     min-height: 0;
   }
+  @media (max-width: 1179px) {
+    .hud-grid-centro > .hud-center {
+      order: -2;
+    }
+    .hud-grid-centro > .hud-col:last-child {
+      order: -1;
+    }
+  }
   @media (min-width: 1180px) {
     .hud {
       height: 100dvh;
@@ -173,6 +181,15 @@
   }
   .map-loading text {
     opacity: 0.35;
+  }
+
+  .lista-partidos > li + li {
+    border-top: 1px solid var(--color-line);
+  }
+  @container (min-width: 36rem) {
+    .lista-partidos > li:nth-child(2) {
+      border-top: 0;
+    }
   }
 
   /* Votes table ------------------------------------------------------ */
@@ -291,6 +308,20 @@
     line-height: 1.22;
     letter-spacing: -0.006em;
     text-wrap: pretty;
+  }
+  @container (min-width: 36rem) {
+    .titulo-voto {
+      font-size: 34px;
+      line-height: 1.1;
+    }
+    .titulo-voto-medio {
+      font-size: 30px;
+      line-height: 1.12;
+    }
+    .titulo-voto-longo {
+      font-size: 26px;
+      line-height: 1.16;
+    }
   }
   .fig {
     font-family: var(--font-serif);

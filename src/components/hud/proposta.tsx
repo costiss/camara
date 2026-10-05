@@ -14,11 +14,25 @@ const TOM: Record<StatusTone, string> = {
 };
 
 /** The outcome as an icon plus a word, never colour alone. */
-export function Veredito({ votacao, className }: { votacao: Pick<Votacao, "descricao" | "aprovacao">; className?: string }) {
+const FUNDO: Record<StatusTone, string> = {
+  success: "bg-green/12",
+  danger: "bg-red/12",
+  warning: "bg-yellow/12",
+  info: "bg-blue/12",
+  accent: "bg-fg/8",
+  neutral: "bg-fg/8",
+};
+
+export function Veredito({ votacao, destaque, className }: {
+  votacao: Pick<Votacao, "descricao" | "aprovacao">;
+  /** Pill with a tinted background, for the vote's headline. */
+  destaque?: boolean;
+  className?: string;
+}) {
   const r = resultadoVotacao(votacao);
   const Icone = r.tone === "success" ? Check : r.tone === "danger" ? X : Minus;
   return (
-    <span className={cn("inline-flex items-center gap-1 font-medium", TOM[r.tone], className)}>
+    <span className={cn("inline-flex items-center gap-1 font-medium", TOM[r.tone], destaque && ["rounded-full px-3 py-1", FUNDO[r.tone]], className)}>
       <Icone className="h-[1.1em] w-[1.1em] shrink-0" strokeWidth={2.5} aria-hidden="true" />
       {r.label}
     </span>

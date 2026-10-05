@@ -30,6 +30,8 @@ interface BrazilMapProps {
   label: string;
   overlay?: ReactNode;
   className?: string;
+  /** Shapes only: no labels or callout boxes, for small corner previews. */
+  compacto?: boolean;
 }
 
 function Callout({ uf, cx, cy, datum, active, onSelect }: {
@@ -76,12 +78,13 @@ export const BrazilMap = memo(function BrazilMap({
   label,
   overlay,
   className,
+  compacto = false,
 }: BrazilMapProps) {
   const toggle = (uf: string) => onSelect?.(activeUf === uf ? null : uf);
   return (
-    <div className={cn("relative flex w-full items-center justify-center min-[1180px]:h-full min-[1180px]:min-h-0", className)}>
+    <div className={cn("relative flex w-full items-center justify-center", !compacto && "min-[1180px]:h-full min-[1180px]:min-h-0", className)}>
       <svg
-        viewBox={`0 0 ${VIEW_W} ${BRAZIL_VIEWBOX.height}`}
+        viewBox={`0 0 ${compacto ? BRAZIL_VIEWBOX.width : VIEW_W} ${BRAZIL_VIEWBOX.height}`}
         className={cn("h-full max-h-full w-full", activeUf && "map-dim")}
         role="group"
         aria-label={label}
@@ -111,7 +114,7 @@ export const BrazilMap = memo(function BrazilMap({
             </path>
           );
         })}
-        {BRAZIL_UFS.filter((s) => !(s.uf in CALLOUTS)).map((s) => {
+        {!compacto && BRAZIL_UFS.filter((s) => !(s.uf in CALLOUTS)).map((s) => {
           const datum = data[s.uf];
           const small = s.uf === "DF";
           return (
@@ -127,7 +130,7 @@ export const BrazilMap = memo(function BrazilMap({
             </g>
           );
         })}
-        {BRAZIL_UFS.filter((s) => s.uf in CALLOUTS).map((s) => (
+        {!compacto && BRAZIL_UFS.filter((s) => s.uf in CALLOUTS).map((s) => (
           <Callout
             key={`c-${s.uf}`}
             uf={s.uf}

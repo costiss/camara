@@ -51,67 +51,76 @@ export function VoteHero({ votacao, tally, onOpenRollCall }: {
   const membros = MEMBROS[votacao.casa];
 
   return (
-    <section className="card enter" aria-labelledby="vote-title">
-      <p className="label">{CASA_NOME[votacao.casa]}</p>
-      <p className="mt-0.5 text-[12px] text-fg-4">{formatQuando(votacao.dataHora ?? votacao.data)}</p>
-
-      <Veredito votacao={votacao} className="mt-4 text-[14px]" />
-      <h1 id="vote-title" className={cn("mt-1.5", tamanhoTitulo(leitura.titulo))}>{leitura.titulo}</h1>
-      <CodigoProposta leitura={leitura} className="mt-2 block text-[13px] text-fg-3" />
-      {leitura.tipo && <ExplicaTipo tipo={leitura.tipo} className="mt-1.5" />}
-
-      <div className="mt-4 rounded-[10px] bg-panel-2 px-3 py-2.5">
-        <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-fg-4">Em votação</p>
-        <p className="mt-0.5 text-[14px] font-medium text-fg">{leitura.etapa.rotulo}</p>
-        <p className="mt-0.5 text-[12px] leading-relaxed text-fg-3">{leitura.etapa.explica}</p>
+    <section className="card enter @container" aria-labelledby="vote-title">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div>
+          <p className="label">{CASA_NOME[votacao.casa]}</p>
+          <p className="mt-0.5 text-[12px] text-fg-4">{formatQuando(votacao.dataHora ?? votacao.data)}</p>
+        </div>
+        <Veredito votacao={votacao} destaque className="text-[14px]" />
       </div>
 
-      {temPlacar ? (
-        <>
-          <div className="mt-5 flex items-end justify-between gap-3">
-            <Figura label="Sim" valor={sim} pct={(sim / validos) * 100} cor={CATEGORIA_COR.sim} alinhamento="left" />
-            <Figura label="Não" valor={nao} pct={(nao / validos) * 100} cor={CATEGORIA_COR.nao} alinhamento="right" />
-          </div>
-          <div className="duel mt-3" role="img" aria-label={`${sim} Sim e ${nao} Não de ${cadeiras} cadeiras; mínimo ${minimo}`}>
-            <span style={{ flexGrow: sim, background: CATEGORIA_COR.sim }} />
-            <span style={{ flexGrow: Math.max(0, cadeiras - validos), background: "var(--color-panel-3)" }} />
-            <span style={{ flexGrow: nao, background: CATEGORIA_COR.nao }} />
-            <span className="duel-mark" style={{ left: `${(minimo / cadeiras) * 100}%` }} />
-          </div>
-          <p className="mt-3 text-[13px] leading-relaxed text-fg-2">
-            {quorum.minimoSim !== null ? (
-              <>
-                Precisava de <b className="font-medium text-fg">{formatNumber(minimo)} votos Sim</b> ({quorum.regra.toLowerCase()}) e teve{" "}
-                <b className="font-medium text-fg">{formatNumber(sim)}</b>.
-              </>
-            ) : (
-              <>Bastava ter mais votos Sim do que Não entre os presentes.</>
-            )}
-            {tally.counts.abstencao > 0 && ` ${formatNumber(tally.counts.abstencao)} se abstiveram.`}
-          </p>
-        </>
-      ) : (
-        <div className="mt-4 rounded-[10px] border border-line px-3 py-2.5">
-          <p className="text-[13px] font-medium text-fg-2">{votacao.secreta ? "Votação secreta" : "Votação simbólica"}</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-fg-3">
-            {votacao.secreta
-              ? "O Senado divulga quem votou, mas não o voto de cada senador."
-              : `Sem registro individual: os ${membros} se manifestaram em conjunto e a Presidência anunciou o resultado.`}
-          </p>
+      <h1 id="vote-title" className={cn("mt-4", tamanhoTitulo(leitura.titulo))}>{leitura.titulo}</h1>
+      <CodigoProposta leitura={leitura} className="mt-2.5 block text-[13px] text-fg-3" />
+      {leitura.tipo && <ExplicaTipo tipo={leitura.tipo} className="mt-1.5" />}
+
+      <div className="mt-5 grid gap-5 @xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] @xl:gap-7">
+        <div>
+          {temPlacar ? (
+            <>
+              <div className="flex items-end justify-between gap-3">
+                <Figura label="Sim" valor={sim} pct={(sim / validos) * 100} cor={CATEGORIA_COR.sim} alinhamento="left" />
+                <Figura label="Não" valor={nao} pct={(nao / validos) * 100} cor={CATEGORIA_COR.nao} alinhamento="right" />
+              </div>
+              <div className="duel mt-3" role="img" aria-label={`${sim} Sim e ${nao} Não de ${cadeiras} cadeiras; mínimo ${minimo}`}>
+                <span style={{ flexGrow: sim, background: CATEGORIA_COR.sim }} />
+                <span style={{ flexGrow: Math.max(0, cadeiras - validos), background: "var(--color-panel-3)" }} />
+                <span style={{ flexGrow: nao, background: CATEGORIA_COR.nao }} />
+                <span className="duel-mark" style={{ left: `${(minimo / cadeiras) * 100}%` }} />
+              </div>
+              <p className="mt-3 text-[13px] leading-relaxed text-fg-2">
+                {quorum.minimoSim !== null ? (
+                  <>
+                    Precisava de <b className="font-medium text-fg">{formatNumber(minimo)} votos Sim</b> ({quorum.regra.toLowerCase()}) e teve{" "}
+                    <b className="font-medium text-fg">{formatNumber(sim)}</b>.
+                  </>
+                ) : (
+                  <>Bastava ter mais votos Sim do que Não entre os presentes.</>
+                )}
+                {tally.counts.abstencao > 0 && ` ${formatNumber(tally.counts.abstencao)} se abstiveram.`}
+              </p>
+            </>
+          ) : (
+            <div className="rounded-[10px] border border-line px-3 py-2.5">
+              <p className="text-[13px] font-medium text-fg-2">{votacao.secreta ? "Votação secreta" : "Votação simbólica"}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-fg-3">
+                {votacao.secreta
+                  ? "O Senado divulga quem votou, mas não o voto de cada senador."
+                  : `Sem registro individual: os ${membros} se manifestaram em conjunto e a Presidência anunciou o resultado.`}
+              </p>
+            </div>
+          )}
+
+          {tally.votantes > 0 && (
+            <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3">
+              <div><dt className="label text-[11px]">Votaram</dt><dd className="fig-m mt-1 text-[20px]">{formatNumber(tally.votantes)}</dd></div>
+              <div><dt className="label text-[11px]">Presença</dt><dd className="fig-m mt-1 text-[20px]">{(((tally.votantes + tally.counts.presente) / cadeiras) * 100).toFixed(0)}%</dd></div>
+              <div><dt className="label text-[11px]">Ausentes</dt><dd className="fig-m mt-1 text-[20px]">{formatNumber(tally.ausentes)}</dd></div>
+            </dl>
+          )}
         </div>
-      )}
 
-      {tally.votantes > 0 && (
-        <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3">
-          <div><dt className="label text-[11px]">Votaram</dt><dd className="fig-m mt-1 text-[20px]">{formatNumber(tally.votantes)}</dd></div>
-          <div><dt className="label text-[11px]">Presença</dt><dd className="fig-m mt-1 text-[20px]">{(((tally.votantes + tally.counts.presente) / cadeiras) * 100).toFixed(0)}%</dd></div>
-          <div><dt className="label text-[11px]">Ausentes</dt><dd className="fig-m mt-1 text-[20px]">{formatNumber(tally.ausentes)}</dd></div>
-        </dl>
-      )}
+        <div className="flex flex-col gap-3">
+          <div className="rounded-[10px] bg-panel-2 px-3 py-2.5">
+            <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-fg-4">Em votação</p>
+            <p className="mt-0.5 text-[14px] font-medium text-fg">{leitura.etapa.rotulo}</p>
+            <p className="mt-0.5 text-[12px] leading-relaxed text-fg-3">{leitura.etapa.explica}</p>
+          </div>
+          <TextoOficial ementa={votacao.ementa} descricao={votacao.descricao} />
+        </div>
+      </div>
 
-      <TextoOficial ementa={votacao.ementa} descricao={votacao.descricao} className="mt-4" />
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
         {onOpenRollCall && tally.votantes > 0 && (
           <button type="button" className="btn btn-sm" onClick={onOpenRollCall}>
             {votacao.secreta ? "Ver quem votou" : `Ver o voto de cada um`}

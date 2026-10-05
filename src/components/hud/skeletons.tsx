@@ -46,18 +46,17 @@ export function HeroSkeleton() {
   );
 }
 
-export function StageSkeleton() {
+export function MapaCantoSkeleton() {
   return (
-    <div className="relative flex h-full flex-col min-[1180px]:min-h-[420px]" aria-busy="true" aria-label="Carregando mapa">
-      <div className="flex items-center justify-between gap-3">
-        <Skeleton className="h-8 w-36 rounded-full" />
-        <Skeleton className="hidden h-9 w-72 rounded-full xl:block" />
-        <Skeleton className="h-3 w-48" />
+    <section className="card" aria-busy="true" aria-label="Carregando mapa">
+      <div className="card-head">
+        <h2>Por estado</h2>
+        <Skeleton className="h-8 w-8 rounded-full" />
       </div>
-      <div className="relative min-h-0 flex-1 py-3">
-        <BrazilMap data={{}} label="Carregando mapa" className="map-loading" />
-      </div>
-    </div>
+      <Skeleton className="mb-3 h-8 w-full rounded-full" />
+      <BrazilMap compacto data={{}} label="Carregando mapa" className="map-loading mx-auto max-w-[220px]" />
+      <Skeleton className="mt-3 h-3 w-40" />
+    </section>
   );
 }
 
