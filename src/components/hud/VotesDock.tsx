@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { router, votacaoHref } from "@/hooks/useUi";
 import { addDays, isoDate } from "@/lib/format";
 import type { Deliberacao } from "@/lib/deliberacoes";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const DIAS = 90;
@@ -18,9 +19,11 @@ interface Dia {
 export function VotesDock({
   deliberacoes,
   currentDate,
+  isLoading,
 }: {
   deliberacoes: Deliberacao[];
   currentDate?: string;
+  isLoading?: boolean;
 }) {
   const [hoje] = useState(() => new Date());
   const dias = useMemo(() => {
@@ -45,11 +48,20 @@ export function VotesDock({
   return (
     <div className="card flex items-center gap-4 py-3">
       <div className="hidden shrink-0 sm:block">
-        <p className="tn text-[13px] font-medium text-fg">{total} votações</p>
-        <p className="text-[11px] text-fg-4">{sessoes} dias com sessão</p>
+        {isLoading ? (
+          <>
+            <Skeleton className="h-3.5 w-20" />
+            <Skeleton className="mt-1.5 h-2.5 w-24" />
+          </>
+        ) : (
+          <>
+            <p className="tn text-[13px] font-medium text-fg">{total} votações</p>
+            <p className="text-[11px] text-fg-4">{sessoes} dias com sessão</p>
+          </>
+        )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex h-9 items-end gap-[2px]" role="list" aria-label="Votações por dia, últimos 90 dias">
+        <div className={cn("flex h-9 items-end gap-[2px]", isLoading && "animate-pulse")} aria-busy={isLoading || undefined} role="list" aria-label="Votações por dia, últimos 90 dias">
           {dias.map((d) => {
             const n = d.camara + d.senado;
             const ativo = d.iso === currentDate;

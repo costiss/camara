@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Search } from "lucide-react";
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MemberAvatar } from "@/components/shared";
-import { useDebouncedValue, useQueryEnum, useQueryParam } from "@/hooks/useUi";
+import { inspecaoHref, useDebouncedValue, useQueryEnum, useQueryParam } from "@/hooks/useUi";
 import { partyColor } from "@/lib/parties";
 import { CATEGORIA_COR, CATEGORIA_LABEL, CATEGORIA_ORDEM } from "@/lib/votos";
 import type { Parlamentar, Votacao, VotoCategoria, VotoParlamentar } from "@/lib/types";
@@ -45,7 +45,10 @@ export function RollCallSheet({ open, onOpenChange, votacao, assentos, onSelect 
         <SheetHeader>
           <SheetTitle>Votação nominal · {votacao.proposicao ?? "Plenário"}</SheetTitle>
           <SheetDescription>
-            {assentos.length} cadeiras. Ausências incluem quem não registrou voto no painel.
+            {assentos.length} cadeiras. Ausências incluem quem não registrou voto no painel.{" "}
+            <a className="link" href={inspecaoHref(votacao, { voto: cat === "todos" ? null : cat, nome: q || null, secao: "votos" })}>
+              Abrir inspeção completa
+            </a>
           </SheetDescription>
           <label className="relative mt-3 block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-5" />

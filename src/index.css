@@ -162,9 +162,17 @@
       min-height: 0;
       overflow: hidden;
     }
-    .hud-grid-lista {
+    .hud-grid-2 {
       grid-template-columns: var(--col-l) minmax(0, 1fr);
     }
+  }
+
+  .map-loading .uf-shape {
+    animation: pulse-soft 1.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .map-loading text {
+    opacity: 0.35;
   }
 
   /* Votes table ------------------------------------------------------ */
@@ -188,6 +196,9 @@
     padding: 12px 10px;
     vertical-align: top;
     border-bottom: 1px solid var(--color-line);
+  }
+  .lista-tabela.meio td {
+    vertical-align: middle;
   }
   .lista-tabela tbody tr {
     position: relative;

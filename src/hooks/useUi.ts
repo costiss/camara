@@ -11,7 +11,7 @@ export function useDebouncedValue<T>(value: T, delay = 250): T {
 
 /* --------------------------- tiny hash router --------------------------- */
 
-export type View = "votacoes" | "lista" | "camara" | "senado" | "agenda";
+export type View = "votacoes" | "inspecionar" | "lista" | "camara" | "senado" | "agenda";
 export type Query = Record<string, string | null | undefined>;
 
 export interface Route {
@@ -20,7 +20,7 @@ export interface Route {
   query: URLSearchParams;
 }
 
-const VIEWS: View[] = ["votacoes", "lista", "camara", "senado", "agenda"];
+const VIEWS: View[] = ["votacoes", "inspecionar", "lista", "camara", "senado", "agenda"];
 
 const LEGADO: Record<string, { view: View; query?: Query }> = {
   dashboard: { view: "votacoes" },
@@ -121,8 +121,16 @@ export const router = new HashRouter();
 
 /** Link to a vote; Senate votes carry their session date so the page can fetch that day. */
 export function votacaoHref(v: { id: string; casa: string; data?: string }, query?: Query): string {
-  const data = v.casa === "senado" && v.data ? v.data.slice(0, 10) : undefined;
-  return routeHref("votacoes", v.id, { ...query, data });
+  return routeHref("votacoes", v.id, { ...query, data: dataSenado(v) });
+}
+
+/** Link to the full inspection of a vote (roll-call, parties, states). */
+export function inspecaoHref(v: { id: string; casa: string; data?: string }, query?: Query): string {
+  return routeHref("inspecionar", v.id, { ...query, data: dataSenado(v) });
+}
+
+function dataSenado(v: { casa: string; data?: string }): string | undefined {
+  return v.casa === "senado" && v.data ? v.data.slice(0, 10) : undefined;
 }
 
 export function navigate(view: View, param?: string, query?: Query) {

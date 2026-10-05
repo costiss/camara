@@ -9,6 +9,7 @@ import { useRoute } from "@/hooks/useUi";
 import type { Parlamentar } from "@/lib/types";
 import { AgendaView } from "@/views/agenda/AgendaView";
 import { CasaView } from "@/views/casa/CasaView";
+import { InspecaoView } from "@/views/inspecao/InspecaoView";
 import { ListaView } from "@/views/lista/ListaView";
 import { VotacoesView } from "@/views/votacoes/VotacoesView";
 
@@ -34,6 +35,7 @@ function Hud() {
     <div className="hud">
       <HudHeader view={route.view} onSearch={abrirBusca} />
       {route.view === "votacoes" && <VotacoesView votacaoId={route.param} onSelectMember={setMembro} />}
+      {route.view === "inspecionar" && <InspecaoView votacaoId={route.param} onSelectMember={setMembro} />}
       {route.view === "lista" && <ListaView />}
       {route.view === "camara" && <CasaView key="camara" casa="camara" onSelectMember={setMembro} />}
       {route.view === "senado" && <CasaView key="senado" casa="senado" onSelectMember={setMembro} />}

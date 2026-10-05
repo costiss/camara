@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { inspecaoHref } from "@/hooks/useUi";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { CADEIRAS, CATEGORIA_COR, quorumDe, resultadoVotacao, type VoteTally } from "@/lib/votos";
 import type { StatusTone, Votacao } from "@/lib/types";
@@ -132,6 +133,9 @@ export function VoteHero({ votacao, tally, onOpenRollCall }: {
             {votacao.secreta ? "Ver presença" : "Ver votação nominal"}
           </button>
         )}
+        <a className="link" href={inspecaoHref(votacao)}>
+          Inspecionar votação
+        </a>
         {votacao.url && (
           <a className="link inline-flex items-center gap-1" href={votacao.url} target="_blank" rel="noopener noreferrer">
             Fonte oficial <ExternalLink className="h-3 w-3" />

@@ -17,7 +17,8 @@ export function useProposicoesPorId(ids: string[]) {
     enabled: ids.length > 0,
     staleTime: 60 * 60 * 1000,
   });
-  return useMemo(() => new Map((q.data ?? []).map((p) => [p.id, p])), [q.data]);
+  const map = useMemo(() => new Map((q.data ?? []).map((p) => [p.id, p])), [q.data]);
+  return { map, isLoading: q.isLoading };
 }
 
 function rotular(v: Votacao, props: Map<string, Proposicao>): Votacao {
@@ -49,7 +50,8 @@ export function useDeliberacoes(casa: Casa | "ambas" = "ambas", periodoValor = P
     () => [...new Set(camara.map((v) => v.proposicaoId).filter(Boolean) as string[])].sort().slice(0, MAX_ROTULOS),
     [camara]
   );
-  const props = useProposicoesPorId(ids);
+  const rotulos = useProposicoesPorId(ids);
+  const props = rotulos.map;
 
   const deliberacoes = useMemo(
     () => DeliberacaoBuilder.agrupar([...camara.map((v) => rotular(v, props)), ...senado]),
@@ -59,7 +61,7 @@ export function useDeliberacoes(casa: Casa | "ambas" = "ambas", periodoValor = P
   return {
     periodo,
     deliberacoes,
-    isLoading: (camaraOn && camaraQ.isLoading) || (senadoOn && senadoQ.isLoading),
+    isLoading: (camaraOn && (camaraQ.isLoading || rotulos.isLoading)) || (senadoOn && senadoQ.isLoading),
     isError: (!camaraOn || camaraQ.isError) && (!senadoOn || senadoQ.isError),
     refetch: () => {
       camaraQ.refetch();

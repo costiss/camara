@@ -1,18 +1,17 @@
 import { useMemo, useState } from "react";
+import { inspecaoHref } from "@/hooks/useUi";
 import { agruparVotos } from "@/lib/breakdown";
+import { OrientacoesPorPartido } from "@/lib/inspecao";
 import { partyColor } from "@/lib/parties";
 import { CATEGORIA_COR } from "@/lib/votos";
-import type { OrientacaoBancada, VotoParlamentar } from "@/lib/types";
+import type { OrientacaoBancada, Votacao, VotoParlamentar } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const LIMITE = 9;
 
-function orientacaoDe(orientacoes: OrientacaoBancada[], partido: string) {
-  const p = partido.toUpperCase();
-  return orientacoes.find((o) => o.lideranca === "partido" && o.sigla.toUpperCase() === p);
-}
 
-export function PartyBreakdown({ assentos, orientacoes, activeUf, onClearUf }: {
+export function PartyBreakdown({ votacao, assentos, orientacoes, activeUf, onClearUf }: {
+  votacao: Votacao;
   assentos: VotoParlamentar[];
   orientacoes: OrientacaoBancada[];
   activeUf: string | null;
@@ -24,6 +23,7 @@ export function PartyBreakdown({ assentos, orientacoes, activeUf, onClearUf }: {
     [assentos, activeUf]
   );
   const governo = orientacoes.find((o) => o.lideranca === "governo");
+  const porPartido = useMemo(() => new OrientacoesPorPartido(orientacoes), [orientacoes]);
   const shown = todos ? grupos : grupos.slice(0, LIMITE);
 
   if (assentos.length === 0) return null;
@@ -48,11 +48,18 @@ export function PartyBreakdown({ assentos, orientacoes, activeUf, onClearUf }: {
           const { sim, nao } = g.tally.counts;
           const validos = sim + nao;
           const pct = validos ? (sim / validos) * 100 : null;
-          const o = orientacaoDe(orientacoes, g.chave);
+          const o = porPartido.de(g.chave);
           return (
             <li key={g.chave} className={cn("py-2", i > 0 && "rowline")}>
               <div className="flex items-baseline gap-2">
-                <span className="max-w-[96px] truncate text-[13px] font-medium" style={{ color: partyColor(g.chave) }}>{g.chave}</span>
+                <a
+                  href={inspecaoHref(votacao, { partido: g.chave, uf: activeUf, secao: "votos" })}
+                  className="max-w-[96px] truncate text-[13px] font-medium no-underline underline-offset-4 hover:underline"
+                  style={{ color: partyColor(g.chave) }}
+                  title={`Ver o voto de cada parlamentar do ${g.chave}`}
+                >
+                  {g.chave}
+                </a>
                 <span className="tn text-[12px] text-fg-4">{g.membros}</span>
                 {o && (
                   <span className="ml-auto whitespace-nowrap text-[11px] text-fg-4" title={`Liderança orientou ${o.orientacao}`}>

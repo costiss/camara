@@ -3,6 +3,7 @@ import { DeliberacaoFeed } from "@/components/hud/DeliberacaoFeed";
 import { HudGrid } from "@/components/hud/HudGrid";
 import { VotesDock } from "@/components/hud/VotesDock";
 import { ErrorState, LoadingRows } from "@/components/shared";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEventos } from "@/hooks/useCamara";
 import { useQueryEnum } from "@/hooks/useUi";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
@@ -29,6 +30,18 @@ function ProximaSessao({ eventos, isLoading, agora }: { eventos: Evento[]; isLoa
       <h1 id="agenda-title" className="manchete mt-4">
         {isLoading ? "Carregando agenda…" : <><span className="text-blue">{futuros.length} {futuros.length === 1 ? "evento" : "eventos"}</span> na agenda</>}
       </h1>
+      {isLoading && (
+        <div className="mt-5 border-t border-line pt-4" aria-busy="true">
+          <Skeleton className="h-3 w-32" />
+          <div className="mt-3 flex gap-4">
+            <Skeleton className="h-12 w-12" />
+            <div className="flex-1">
+              <Skeleton className="h-3.5 w-full" />
+              <Skeleton className="mt-2 h-3 w-2/3" />
+            </div>
+          </div>
+        </div>
+      )}
       {proxima && d && (
         <div className="mt-5 border-t border-line pt-4">
           <p className="label">Próximo{ehPlenario(proxima) ? " no Plenário" : ""}</p>
@@ -45,8 +58,8 @@ function ProximaSessao({ eventos, isLoading, agora }: { eventos: Evento[]; isLoa
         </div>
       )}
       <div className="mt-4 border-t border-line pt-3 text-[13px]">
-        <div className="flex justify-between py-1"><span className="label">No Plenário</span><span className="tn">{futuros.filter(ehPlenario).length}</span></div>
-        <div className="flex justify-between py-1"><span className="label">Em comissões e outros</span><span className="tn">{futuros.filter((e) => !ehPlenario(e)).length}</span></div>
+        <div className="flex justify-between py-1"><span className="label">No Plenário</span><span className="tn">{isLoading ? "—" : futuros.filter(ehPlenario).length}</span></div>
+        <div className="flex justify-between py-1"><span className="label">Em comissões e outros</span><span className="tn">{isLoading ? "—" : futuros.filter((e) => !ehPlenario(e)).length}</span></div>
       </div>
       <p className="mt-3 text-[11px] leading-relaxed text-fg-4">A agenda do Senado ainda não está incluída; as votações do Senado aparecem no feed ao lado.</p>
     </section>
@@ -119,7 +132,7 @@ export function AgendaView() {
     <HudGrid
       left={<ProximaSessao eventos={proximos} isLoading={proximosQ.isLoading} agora={agora} />}
       center={center}
-      dock={<VotesDock deliberacoes={feed.deliberacoes} />}
+      dock={<VotesDock deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} />}
       right={<DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} />}
     />
   );

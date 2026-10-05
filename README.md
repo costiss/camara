@@ -25,6 +25,11 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
   every vote of the same session; full roll-call; feed of both houses.
 - **Câmara / Senado** — composition: left/centre/right bar, seats by party,
   map of the leading party per state (click a state to filter), bancadas and members.
+- **Inspecionar** (`#/inspecionar/<id>`) — everything about one vote: what was
+  voted, every vote category, quorum, each leader's orientation, a party or
+  state table (with how faithfully each party followed its orientation) and
+  the roll-call with name, party, state and vote filters plus CSV export.
+  Party names in the panel and in the table jump to that party's members.
 - **Lista** (`#/lista`) — every floor deliberation of both houses in a period
   (30/90 days or a year), faceted by result and bill type, with search and
   paging. A row opens the Votações panel on that vote.
@@ -40,6 +45,7 @@ Defaults are left out of the URL.
 | Route | Parameters |
 | --- | --- |
 | `#/votacoes/<id>` | `uf`, `modo=plenario`, `nominal=0` (feed shows every vote), `chamada=1` (roll-call open), `voto` (`sim`, `nao`, …), `nome`, `data` (Senate session date) |
+| `#/inspecionar/<id>` | `voto`, `partido`, `uf`, `nome`, `contra=1` (voted against the party), `ordem=partido\|uf\|voto`, `grupo=estado`, `secao=votos\|grupos` (scrolls to that section), `data` |
 | `#/lista` | `casa=camara\|senado`, `periodo=30d\|90d\|<ano>`, `tipo` (`PEC`, `PL`, …), `resultado=aprovada\|rejeitada\|outros`, `nominal=1`, `q`, `ordem=antigas`, `pagina` |
 | `#/camara`, `#/senado` | `uf`, `partido`, `q` |
 | `#/agenda` | `periodo=realizados`, `tipo=plenario\|comissoes` |
@@ -57,6 +63,9 @@ Old links such as `#/pecs` are rewritten to their list equivalent.
   the source of truth for the result.
 - Senate results come from `resultadoVotacao`, and its roll-call is inline;
   codes such as `AP`, `LS`, `MIS`, `P-NRV` become absent/present-without-vote.
+- Party orientations come from the party's own leader or, failing that, its
+  federation (`Fdr PT-PCdoB-PV`). Bloc names are abbreviated by the API
+  (`Bl UniPpPsd...`) and are not resolved to parties.
 - The Câmara API caps date ranges at 3 months, so longer periods are fetched
   in quarterly windows; the Senate takes the whole range in one request.
 
@@ -86,7 +95,7 @@ src/
 │   ├── shared/     hemicycle, avatars, badges, states
 │   ├── detail/     proposition / member sheets
 │   └── ui/         Radix-based primitives
-├── views/          votacoes, lista, casa (Câmara/Senado), agenda
+├── views/          votacoes, inspecao, lista, casa (Câmara/Senado), agenda
 ├── hooks/          TanStack Query hooks + hash router
 └── lib/            api adapters, vote semantics, breakdowns, geo shapes
 ```

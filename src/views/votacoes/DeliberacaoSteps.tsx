@@ -1,4 +1,4 @@
-import { votacaoHref } from "@/hooks/useUi";
+import { inspecaoHref, votacaoHref } from "@/hooks/useUi";
 import { formatTime } from "@/lib/format";
 import { resultadoVotacao } from "@/lib/votos";
 import type { Deliberacao } from "@/lib/deliberacoes";
@@ -15,7 +15,11 @@ const TONE: Record<StatusTone, string> = {
 };
 
 /** Every vote of the same proposition in the same session, oldest first. */
-export function DeliberacaoSteps({ deliberacao, currentId }: { deliberacao: Deliberacao; currentId: string }) {
+export function DeliberacaoSteps({ deliberacao, currentId, destino = "painel" }: {
+  deliberacao: Deliberacao;
+  currentId: string;
+  destino?: "painel" | "inspecao";
+}) {
   if (deliberacao.votacoes.length < 2) return null;
   const passos = [...deliberacao.votacoes].reverse();
   return (
@@ -30,7 +34,7 @@ export function DeliberacaoSteps({ deliberacao, currentId }: { deliberacao: Deli
           const atual = v.id === currentId;
           return (
             <li key={v.id} className="timeline-item" data-current={atual}>
-              <a href={votacaoHref(v)} className={cn("block no-underline", atual ? "text-fg" : "text-fg-2 hover:text-fg")} aria-current={atual || undefined}>
+              <a href={destino === "inspecao" ? inspecaoHref(v) : votacaoHref(v)} className={cn("block no-underline", atual ? "text-fg" : "text-fg-2 hover:text-fg")} aria-current={atual || undefined}>
                 <span className="flex items-baseline gap-2 text-[12px]">
                   {v.dataHora && v.dataHora.length > 10 && <span className="tn text-fg-4">{formatTime(v.dataHora)}</span>}
                   <span className={cn("font-medium", TONE[r.tone])}>{r.label}</span>

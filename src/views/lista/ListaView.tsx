@@ -23,7 +23,7 @@ export function ListaView() {
   const visiveis = filtradas.slice(inicio, inicio + POR_PAGINA);
 
   return (
-    <div className="hud-grid hud-grid-lista">
+    <div className="hud-grid hud-grid-2">
       <div className="hud-col">
         <ListaFacetas
           filtro={filtro}

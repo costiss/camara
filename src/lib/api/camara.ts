@@ -476,7 +476,7 @@ export async function getVotacaoOrientacoes(id: string): Promise<OrientacaoBanca
         sigla: o.siglaPartidoBloco,
         orientacao: liberado ? "Liberado" : c.voto,
         categoria: liberado ? null : c.categoria,
-        lideranca: LIDERANCA[o.codTipoLideranca] ?? "outro",
+        lideranca: /^governo$/i.test(o.siglaPartidoBloco) ? "governo" : (LIDERANCA[o.codTipoLideranca] ?? "outro"),
       };
     });
 }

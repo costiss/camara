@@ -27,7 +27,7 @@ function ViewSwitch({ view, className }: { view: View; className?: string }) {
   return (
     <nav aria-label="Seções" className={cn("switch quiet-scroll overflow-x-auto", className)}>
       {VIEWS.map((v) => (
-        <a key={v.id} href={routeHref(v.id)} aria-current={v.id === view ? "page" : undefined}>
+        <a key={v.id} href={routeHref(v.id)} aria-current={v.id === (view === "inspecionar" ? "votacoes" : view) ? "page" : undefined}>
           {v.label}
         </a>
       ))}

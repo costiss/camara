@@ -1,3 +1,4 @@
+import { BarRowsSkeleton } from "@/components/hud/skeletons";
 import type { Deliberacao } from "@/lib/deliberacoes";
 import { FiltroVotacoes, type ResultadoFiltro } from "@/lib/filtroVotacoes";
 import { formatNumber } from "@/lib/format";
@@ -79,7 +80,8 @@ export function ListaFacetas({ filtro, deliberacoes, total, periodo, isLoading, 
             <button type="button" className="meta link" onClick={() => definir({ resultado: null })}>Limpar</button>
           )}
         </div>
-        {(Object.keys(RESULTADO_LABEL) as (keyof typeof RESULTADO_LABEL)[]).map((r, i) => (
+        {isLoading && <BarRowsSkeleton rows={3} label="Carregando resultados" />}
+        {!isLoading && (Object.keys(RESULTADO_LABEL) as (keyof typeof RESULTADO_LABEL)[]).map((r, i) => (
           <div key={r} className={cn(i > 0 && "rowline")}>
             <Faceta
               label={RESULTADO_LABEL[r]}
@@ -99,11 +101,12 @@ export function ListaFacetas({ filtro, deliberacoes, total, periodo, isLoading, 
           {filtro.tipo ? (
             <button type="button" className="meta link" onClick={() => definir({ tipo: null })}>Limpar</button>
           ) : (
-            <span className="meta">{porTipo.length} tipos</span>
+            <span className="meta">{isLoading ? "" : `${porTipo.length} tipos`}</span>
           )}
         </div>
+        {isLoading && <BarRowsSkeleton rows={6} label="Carregando tipos" />}
         {porTipo.length === 0 && !isLoading && <p className="py-3 text-[12px] text-fg-4">Nada neste período.</p>}
-        {porTipo.map(([tipo, n], i) => (
+        {!isLoading && porTipo.map(([tipo, n], i) => (
           <div key={tipo} className={cn(i > 0 && "rowline")}>
             <Faceta
               label={tipo}

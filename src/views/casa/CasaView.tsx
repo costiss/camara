@@ -3,7 +3,8 @@ import { BrazilMap, type UfDatum } from "@/components/hud/BrazilMap";
 import { DeliberacaoFeed } from "@/components/hud/DeliberacaoFeed";
 import { HudGrid } from "@/components/hud/HudGrid";
 import { VotesDock } from "@/components/hud/VotesDock";
-import { ErrorState, LoadingRows } from "@/components/shared";
+import { ErrorState } from "@/components/shared";
+import { BarRowsSkeleton, CompositionSkeleton, MembersSkeleton } from "@/components/hud/skeletons";
 import { useDeputados } from "@/hooks/useCamara";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { useSenadores } from "@/hooks/useSenado";
@@ -94,7 +95,10 @@ export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember:
   }
 
   const left = q.isLoading ? (
-    <div className="card"><LoadingRows rows={6} height={40} /></div>
+    <>
+      <CompositionSkeleton />
+      <MembersSkeleton />
+    </>
   ) : (
     <>
       <CompositionCard casa={casa} membros={membros} partido={partido} uf={uf} onPartido={setPartido} />
@@ -129,7 +133,7 @@ export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember:
         )}
       </div>
       <div className="min-h-0 flex-1 py-3">
-        <BrazilMap data={mapData} activeUf={uf} onSelect={setUf} label={`Partido com mais cadeiras por estado, ${casa === "camara" ? "Câmara" : "Senado"}`} />
+        <BrazilMap data={mapData} activeUf={uf} onSelect={setUf} className={q.isLoading ? "map-loading" : undefined} label={`Partido com mais cadeiras por estado, ${casa === "camara" ? "Câmara" : "Senado"}`} />
       </div>
     </div>
   );
@@ -138,10 +142,19 @@ export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember:
     <HudGrid
       left={left}
       center={center}
-      dock={<VotesDock deliberacoes={feed.deliberacoes} />}
+      dock={<VotesDock deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} />}
       right={
         <>
-          {!q.isLoading && <BancadasCard membros={membros} partido={partido} onPartido={setPartido} />}
+          {q.isLoading ? (
+            <section className="card">
+              <div className="card-head">
+                <h2>Bancadas</h2>
+              </div>
+              <BarRowsSkeleton rows={10} label="Carregando bancadas" />
+            </section>
+          ) : (
+            <BancadasCard membros={membros} partido={partido} onPartido={setPartido} />
+          )}
           <DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} casa={casa} limit={8} />
         </>
       }
