@@ -62,7 +62,7 @@ function useMembros(casa: Casa) {
   return casa === "camara" ? dep : sen;
 }
 
-export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember: (p: Parlamentar) => void }) {
+export function CasaView({ casa }: { casa: Casa }) {
   const q = useMembros(casa);
   const feed = useDeliberacoes(casa);
   const membros = useMemo(() => q.data ?? [], [q.data]);
@@ -110,7 +110,6 @@ export function CasaView({ casa, onSelectMember }: { casa: Casa; onSelectMember:
         onClear={() => {
           router.patch({ uf: null, partido: null });
         }}
-        onSelect={onSelectMember}
       />
     </>
   );

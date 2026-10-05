@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { MemberAvatar } from "@/components/shared";
-import { useDebouncedValue, useQueryParam } from "@/hooks/useUi";
+import { parlamentarHref, useDebouncedValue, useQueryParam } from "@/hooks/useUi";
 import { partyColor } from "@/lib/parties";
 import type { Casa, Parlamentar } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -9,13 +9,12 @@ import { cn } from "@/lib/utils";
 const PAGINA = 10;
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export function MembersCard({ casa, membros, uf, partido, onClear, onSelect }: {
+export function MembersCard({ casa, membros, uf, partido, onClear }: {
   casa: Casa;
   membros: Parlamentar[];
   uf: string | null;
   partido: string | null;
   onClear: () => void;
-  onSelect: (p: Parlamentar) => void;
 }) {
   const [q, setQ] = useQueryParam("q");
   const [limite, setLimite] = useState(PAGINA);
@@ -50,7 +49,7 @@ export function MembersCard({ casa, membros, uf, partido, onClear, onSelect }: {
       <ol className="flex flex-col">
         {filtrados.slice(0, limite).map((m, i) => (
           <li key={m.id} className={cn(i > 0 && "rowline")}>
-            <button type="button" onClick={() => onSelect(m)} className="flex w-full items-center gap-2.5 rounded-lg px-1 py-2 text-left transition-colors hover:bg-fg/5">
+            <a href={parlamentarHref(m.id)} className="flex w-full items-center gap-2.5 rounded-lg px-1 py-2 text-left no-underline transition-colors hover:bg-fg/5">
               <MemberAvatar name={m.nome} photo={m.foto} party={m.partido} size={32} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] text-fg">{m.nome}</span>
@@ -60,7 +59,7 @@ export function MembersCard({ casa, membros, uf, partido, onClear, onSelect }: {
                 </span>
               </span>
               {m.papel && <span className="chip h-5 px-2 text-[11px]">{m.papel}</span>}
-            </button>
+            </a>
           </li>
         ))}
       </ol>

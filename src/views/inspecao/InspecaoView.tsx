@@ -6,7 +6,7 @@ import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { router, useRoute } from "@/hooks/useUi";
 import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
 import { InspecaoVotacao } from "@/lib/inspecao";
-import type { OrientacaoBancada, Parlamentar } from "@/lib/types";
+import type { OrientacaoBancada } from "@/lib/types";
 import { CATEGORIA_COR } from "@/lib/votos";
 import { DeliberacaoSteps } from "../votacoes/DeliberacaoSteps";
 import { GruposSecao } from "./GruposSecao";
@@ -47,7 +47,7 @@ function SecaoSkeleton({ titulo, linhas }: { titulo: string; linhas: number }) {
   );
 }
 
-export function InspecaoView({ votacaoId, onSelectMember }: { votacaoId?: string; onSelectMember: (p: Parlamentar) => void }) {
+export function InspecaoView({ votacaoId }: { votacaoId?: string }) {
   const { query } = useRoute();
   const completa = useVotacaoCompleta(votacaoId, query.get("data") ?? undefined);
   const feed = useDeliberacoes();
@@ -109,7 +109,7 @@ export function InspecaoView({ votacaoId, onSelectMember }: { votacaoId?: string
           <>
             {orientacoes.length > 0 && <Orientacoes orientacoes={orientacoes} />}
             <GruposSecao inspecao={inspecao} onPartido={(p) => focar({ partido: p })} onUf={(u) => focar({ uf: u })} />
-            <VotosSecao votacao={votacao} inspecao={inspecao} onSelectMember={onSelectMember} />
+            <VotosSecao votacao={votacao} inspecao={inspecao} />
           </>
         )}
       </div>

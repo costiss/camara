@@ -7,7 +7,6 @@ import { HeroSkeleton, MapaCantoSkeleton, PartyBreakdownSkeleton } from "@/compo
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
 import { router, useQueryParam, useRoute } from "@/hooks/useUi";
-import type { Parlamentar } from "@/lib/types";
 import { DeliberacaoSteps } from "./DeliberacaoSteps";
 import { PartyBreakdown } from "./PartyBreakdown";
 import { RollCallSheet } from "./RollCallSheet";
@@ -15,10 +14,7 @@ import { VoteHero } from "./VoteHero";
 import { MapaCanto } from "./MapaCanto";
 import { NavegacaoVotacao } from "./NavegacaoVotacao";
 
-export function VotacoesView({ votacaoId, onSelectMember }: {
-  votacaoId?: string;
-  onSelectMember: (p: Parlamentar) => void;
-}) {
+export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
   const feed = useDeliberacoes();
   const padrao = useMemo(
     () => (feed.deliberacoes.find((d) => d.principal.nominal) ?? feed.deliberacoes[0])?.principal.id,
@@ -113,10 +109,6 @@ export function VotacoesView({ votacaoId, onSelectMember }: {
           onOpenChange={setRollCall}
           votacao={votacao}
           assentos={assentos}
-          onSelect={(p) => {
-            setRollCall(false);
-            onSelectMember(p);
-          }}
         />
       )}
     </>

@@ -11,7 +11,7 @@ export function useDebouncedValue<T>(value: T, delay = 250): T {
 
 /* --------------------------- tiny hash router --------------------------- */
 
-export type View = "votacoes" | "inspecionar" | "lista" | "camara" | "senado" | "agenda";
+export type View = "votacoes" | "inspecionar" | "parlamentar" | "lista" | "camara" | "senado" | "agenda";
 export type Query = Record<string, string | null | undefined>;
 
 export interface Route {
@@ -20,7 +20,7 @@ export interface Route {
   query: URLSearchParams;
 }
 
-const VIEWS: View[] = ["votacoes", "inspecionar", "lista", "camara", "senado", "agenda"];
+const VIEWS: View[] = ["votacoes", "inspecionar", "parlamentar", "lista", "camara", "senado", "agenda"];
 
 const LEGADO: Record<string, { view: View; query?: Query }> = {
   dashboard: { view: "votacoes" },
@@ -132,6 +132,11 @@ export function votacaoHref(v: { id: string; casa: string; data?: string }, quer
 /** Link to the full inspection of a vote (roll-call, parties, states). */
 export function inspecaoHref(v: { id: string; casa: string; data?: string }, query?: Query): string {
   return routeHref("inspecionar", v.id, { ...query, data: dataSenado(v) });
+}
+
+/** A deputy's or senator's page; `id` is namespaced (camara-123, senado-456). */
+export function parlamentarHref(id: string, query?: Query): string {
+  return routeHref("parlamentar", id, query);
 }
 
 function dataSenado(v: { casa: string; data?: string }): string | undefined {

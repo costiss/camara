@@ -520,6 +520,7 @@ export async function getProposicoesPorAutor(
 ): Promise<Proposicao[]> {
   const url = new URL(`${BASE}/proposicoes`);
   url.searchParams.set("idDeputadoAutor", String(id));
+  for (const tipo of ["PEC", "PLP", "PL", "PDL"]) url.searchParams.append("siglaTipo", tipo);
   url.searchParams.set("itens", String(itens));
   url.searchParams.set("ordem", "DESC");
   url.searchParams.set("ordenarPor", "id");
@@ -527,7 +528,6 @@ export async function getProposicoesPorAutor(
   return (dados ?? []).map(mapProposicao);
 }
 
-/* ---------------- PECs voted in a given year (Câmara floor) ------------- */
 
 async function paginarTudo<T>(url: string, maxPaginas = 40): Promise<T[]> {
   const out: T[] = [];

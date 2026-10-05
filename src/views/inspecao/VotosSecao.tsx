@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { Download, Search } from "lucide-react";
 import { MemberAvatar } from "@/components/shared";
-import { router, useDebouncedValue, useRoute } from "@/hooks/useUi";
+import { parlamentarHref, router, useDebouncedValue, useRoute } from "@/hooks/useUi";
 import { formatNumber } from "@/lib/format";
 import { FiltroVotos, votosCsv, type InspecaoVotacao, type OrdemVotos } from "@/lib/inspecao";
 import { partyColor } from "@/lib/parties";
-import type { Parlamentar, Votacao, VotoParlamentar } from "@/lib/types";
+import type { Votacao, VotoParlamentar } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CATEGORIA_COR, CATEGORIA_LABEL, CATEGORIA_ORDEM } from "@/lib/votos";
 
@@ -24,15 +24,7 @@ function baixarCsv(votacao: Votacao, votos: VotoParlamentar[], inspecao: Inspeca
   URL.revokeObjectURL(a.href);
 }
 
-function paraParlamentar(v: VotoParlamentar, votacao: Votacao): Parlamentar {
-  return { id: v.parlamentarId, nome: v.nome, partido: v.partido, uf: v.uf, foto: v.foto, casa: votacao.casa };
-}
-
-export function VotosSecao({ votacao, inspecao, onSelectMember }: {
-  votacao: Votacao;
-  inspecao: InspecaoVotacao;
-  onSelectMember: (p: Parlamentar) => void;
-}) {
+export function VotosSecao({ votacao, inspecao }: { votacao: Votacao; inspecao: InspecaoVotacao }) {
   const { query } = useRoute();
   const debounced = useDebouncedValue(query.toString(), 120);
   const filtro = useMemo(() => new FiltroVotos(new URLSearchParams(debounced)), [debounced]);
@@ -107,7 +99,7 @@ export function VotosSecao({ votacao, inspecao, onSelectMember }: {
               const contra = inspecao.contrariou(v);
               return (
                 <li key={v.parlamentarId} className={cn("flex items-center gap-2.5 py-2.5", i > 0 && "rowline")}>
-                  <button type="button" onClick={() => onSelectMember(paraParlamentar(v, votacao))} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+                  <a href={parlamentarHref(v.parlamentarId)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left no-underline">
                     <MemberAvatar name={v.nome} photo={v.foto} party={v.partido} size={32} />
                     <span className="min-w-0">
                       <span className="block truncate text-[13px] text-fg">{v.nome}</span>
@@ -116,7 +108,7 @@ export function VotosSecao({ votacao, inspecao, onSelectMember }: {
                         <span className="text-fg-4"> · {v.uf}</span>
                       </span>
                     </span>
-                  </button>
+                  </a>
                   <span className="shrink-0 text-right text-[13px]">
                     <span className="inline-flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full" style={{ background: CATEGORIA_COR[v.categoria], outline: v.categoria === "ausente" ? "1px solid var(--color-line-2)" : undefined }} />
@@ -146,10 +138,10 @@ export function VotosSecao({ votacao, inspecao, onSelectMember }: {
                   return (
                     <tr key={v.parlamentarId}>
                       <td className="py-2">
-                        <button type="button" onClick={() => onSelectMember(paraParlamentar(v, votacao))} className="flex items-center gap-2.5 text-left hover:underline">
+                        <a href={parlamentarHref(v.parlamentarId)} className="flex items-center gap-2.5 text-left no-underline hover:underline">
                           <MemberAvatar name={v.nome} photo={v.foto} party={v.partido} size={28} />
                           <span>{v.nome}</span>
-                        </button>
+                        </a>
                       </td>
                       <td className="py-2">
                         <button type="button" className="hover:underline" style={{ color: partyColor(v.partido) }} onClick={() => definir({ partido: v.partido })}>

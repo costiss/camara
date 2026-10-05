@@ -5,10 +5,9 @@ import { MemberAvatar } from "@/components/shared";
 import { useDeputados } from "@/hooks/useCamara";
 import { useSenadores } from "@/hooks/useSenado";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
-import { router, useDebouncedValue, votacaoHref } from "@/hooks/useUi";
+import { parlamentarHref, router, useDebouncedValue, votacaoHref } from "@/hooks/useUi";
 import { tipoDaProposta, tituloPopular } from "@/lib/linguagem";
 import { formatDate } from "@/lib/format";
-import type { Parlamentar } from "@/lib/types";
 
 const norm = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -26,11 +25,9 @@ function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
 export function SearchDialog({
   open,
   onOpenChange,
-  onSelectMember,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectMember: (p: Parlamentar) => void;
 }) {
   const [q, setQ] = useState("");
   const query = norm(useDebouncedValue(q, 120).trim());
@@ -92,7 +89,7 @@ export function SearchDialog({
                 className="ev grid-cols-[32px_minmax(0,1fr)_auto] items-center"
                 onClick={() => {
                   close();
-                  onSelectMember(m);
+                  router.abrir(parlamentarHref(m.id));
                 }}
               >
                 <MemberAvatar name={m.nome} photo={m.foto} party={m.partido} size={28} />

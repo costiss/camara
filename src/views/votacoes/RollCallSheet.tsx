@@ -2,21 +2,20 @@ import { useMemo } from "react";
 import { Search } from "lucide-react";
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MemberAvatar } from "@/components/shared";
-import { inspecaoHref, useDebouncedValue, useQueryEnum, useQueryParam } from "@/hooks/useUi";
+import { inspecaoHref, parlamentarHref, useDebouncedValue, useQueryEnum, useQueryParam } from "@/hooks/useUi";
 import { partyColor } from "@/lib/parties";
 import { CATEGORIA_COR, CATEGORIA_LABEL, CATEGORIA_ORDEM } from "@/lib/votos";
-import type { Parlamentar, Votacao, VotoCategoria, VotoParlamentar } from "@/lib/types";
+import type { Votacao, VotoCategoria, VotoParlamentar } from "@/lib/types";
 
 const FILTROS: readonly (VotoCategoria | "todos")[] = ["todos", ...CATEGORIA_ORDEM];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export function RollCallSheet({ open, onOpenChange, votacao, assentos, onSelect }: {
+export function RollCallSheet({ open, onOpenChange, votacao, assentos }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   votacao: Votacao;
   assentos: VotoParlamentar[];
-  onSelect: (p: Parlamentar) => void;
 }) {
   const [q, setQ] = useQueryParam("nome");
   const [cat, setCat] = useQueryEnum<VotoCategoria | "todos">("voto", FILTROS, "todos");
@@ -75,10 +74,9 @@ export function RollCallSheet({ open, onOpenChange, votacao, assentos, onSelect 
               <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                 {g.itens.map((a) => (
                   <li key={a.parlamentarId}>
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-fg/5"
-                      onClick={() => onSelect({ id: a.parlamentarId, casa: votacao.casa, nome: a.nome, partido: a.partido, uf: a.uf, foto: a.foto })}
+                    <a
+                      href={parlamentarHref(a.parlamentarId)}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left no-underline transition-colors hover:bg-fg/5"
                     >
                       <MemberAvatar name={a.nome} photo={a.foto} party={a.partido} size={28} />
                       <span className="min-w-0 flex-1">
@@ -88,7 +86,7 @@ export function RollCallSheet({ open, onOpenChange, votacao, assentos, onSelect 
                           <span className="text-fg-4"> · {a.uf}{a.detalhe && a.categoria === "ausente" ? ` · ${a.detalhe}` : ""}</span>
                         </span>
                       </span>
-                    </button>
+                    </a>
                   </li>
                 ))}
               </ul>
