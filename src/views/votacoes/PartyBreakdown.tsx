@@ -35,12 +35,12 @@ export function PartyBreakdown({ votacao, assentos, orientacoes, activeUf, onCle
         {activeUf ? (
           <button type="button" className="meta link" onClick={onClearUf}>Ver Brasil</button>
         ) : (
-          <span className="meta">% Sim · orientação</span>
+          <span className="meta">% de votos Sim</span>
         )}
       </div>
       {governo && (
         <p className="-mt-1 mb-2 text-[12px] text-fg-3">
-          Governo orientou <b className="font-medium" style={{ color: governo.categoria ? CATEGORIA_COR[governo.categoria] : undefined }}>{governo.orientacao}</b>
+          O Governo pediu <b className="font-medium" style={{ color: governo.categoria ? CATEGORIA_COR[governo.categoria] : undefined }}>{governo.orientacao}</b>
         </p>
       )}
       <ul className="flex flex-col">
@@ -62,8 +62,8 @@ export function PartyBreakdown({ votacao, assentos, orientacoes, activeUf, onCle
                 </a>
                 <span className="tn text-[12px] text-fg-4">{g.membros}</span>
                 {o && (
-                  <span className="ml-auto whitespace-nowrap text-[11px] text-fg-4" title={`Liderança orientou ${o.orientacao}`}>
-                    orient. <span style={{ color: o.categoria ? CATEGORIA_COR[o.categoria] : "var(--color-fg-2)" }}>{o.orientacao}</span>
+                  <span className="ml-auto whitespace-nowrap text-[11px] text-fg-4" title={`A liderança do partido pediu: ${o.orientacao}`}>
+                    pediu <span style={{ color: o.categoria ? CATEGORIA_COR[o.categoria] : "var(--color-fg-2)" }}>{o.orientacao}</span>
                   </span>
                 )}
                 <span className={cn("tn w-[42px] shrink-0 text-right text-[13px] font-medium", !o && "ml-auto")}>

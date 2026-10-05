@@ -82,7 +82,7 @@ export function PartyBreakdownSkeleton() {
     <section className="card">
       <div className="card-head">
         <h2>Por partido</h2>
-        <span className="meta">% Sim · orientação</span>
+        <span className="meta">% de votos Sim</span>
       </div>
       <BarRowsSkeleton rows={9} label="Carregando partidos" />
     </section>

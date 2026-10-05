@@ -1,18 +1,10 @@
+import { CodigoProposta, Veredito } from "@/components/hud/proposta";
 import { votacaoHref } from "@/hooks/useUi";
+import { lerVotacao, type Leitura } from "@/lib/linguagem";
 import type { Deliberacao } from "@/lib/deliberacoes";
 import { formatDate, formatTime } from "@/lib/format";
-import type { StatusTone } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { resultadoVotacao } from "@/lib/votos";
 
-const TONE: Record<StatusTone, string> = {
-  success: "text-green",
-  danger: "text-red",
-  warning: "text-yellow",
-  info: "text-blue",
-  accent: "text-fg",
-  neutral: "text-fg-3",
-};
 const CASA: Record<string, string> = { camara: "Câmara", senado: "Senado" };
 
 function Placar({ d }: { d: Deliberacao }) {
@@ -22,9 +14,18 @@ function Placar({ d }: { d: Deliberacao }) {
   return <span className="tn">{p.sim} a {p.nao}</span>;
 }
 
-function Resultado({ d }: { d: Deliberacao }) {
-  const r = resultadoVotacao(d.principal);
-  return <span className={TONE[r.tone]}>{r.label}</span>;
+function leituraDe(d: Deliberacao) {
+  return lerVotacao({ ...d.principal, ementa: d.ementa ?? d.principal.ementa, proposicao: d.proposicao ?? d.principal.proposicao });
+}
+
+function Meta({ leitura, className }: { leitura: Leitura; className?: string }) {
+  return (
+    <span className={className}>
+      <CodigoProposta leitura={leitura} />
+      {leitura.codigo && " · "}
+      {leitura.etapa.rotulo}
+    </span>
+  );
 }
 
 function hora(d: Deliberacao): string {
@@ -39,51 +40,57 @@ export function ListaTabela({ itens }: { itens: Deliberacao[] }) {
           <tr>
             <th scope="col" className="w-[92px]">Data</th>
             <th scope="col" className="w-[72px]">Casa</th>
-            <th scope="col">Proposição</th>
-            <th scope="col" className="w-[120px]">Resultado</th>
+            <th scope="col">Assunto</th>
+            <th scope="col" className="w-[124px]">Resultado</th>
             <th scope="col" className="w-[84px] text-right">Placar</th>
             <th scope="col" className="w-[72px] text-right">Votações</th>
           </tr>
         </thead>
         <tbody>
-          {itens.map((d) => (
-            <tr key={d.key}>
-              <td className="tn text-fg-2">
-                {formatDate(d.data)}
-                <span className="block text-[11px] text-fg-5">{hora(d)}</span>
-              </td>
-              <td className="text-fg-3">{CASA[d.casa]}</td>
-              <td>
-                <a href={votacaoHref(d.principal, { de: "lista" })} className="lista-link font-medium text-fg no-underline">
-                  {d.proposicao ?? "Votação em plenário"}
-                </a>
-                <span className="mt-0.5 line-clamp-2 text-[12px] text-fg-3">{d.ementa ?? d.principal.descricao}</span>
-              </td>
-              <td><Resultado d={d} /></td>
-              <td className="text-right"><Placar d={d} /></td>
-              <td className="tn text-right text-fg-3">{d.votacoes.length}</td>
-            </tr>
-          ))}
+          {itens.map((d) => {
+            const leitura = leituraDe(d);
+            return (
+              <tr key={d.key}>
+                <td className="tn text-fg-2">
+                  {formatDate(d.data)}
+                  <span className="block text-[11px] text-fg-5">{hora(d)}</span>
+                </td>
+                <td className="text-fg-3">{CASA[d.casa]}</td>
+                <td>
+                  <a href={votacaoHref(d.principal, { de: "lista" })} className="lista-link line-clamp-2 font-medium leading-snug text-fg no-underline">
+                    {leitura.titulo}
+                  </a>
+                  <Meta leitura={leitura} className="mt-1 block text-[12px] text-fg-4" />
+                </td>
+                <td><Veredito votacao={d.principal} /></td>
+                <td className="text-right"><Placar d={d} /></td>
+                <td className="tn text-right text-fg-3">{d.votacoes.length}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
       <ol className="flex flex-col md:hidden">
-        {itens.map((d, i) => (
-          <li key={d.key} className={cn(i > 0 && "rowline")}>
-            <a href={votacaoHref(d.principal, { de: "lista" })} className="block rounded-md px-1 py-3 no-underline hover:bg-fg/5">
-              <span className="flex items-baseline gap-2 text-[12px]">
-                <span className="tn text-fg-2">{formatDate(d.data)}</span>
-                <span className="text-fg-4">{CASA[d.casa]}</span>
-                <span className="ml-auto"><Resultado d={d} /></span>
-              </span>
-              <span className="mt-1 flex items-baseline gap-2">
-                <span className="text-[14px] font-medium text-fg">{d.proposicao ?? "Votação em plenário"}</span>
-                <span className="ml-auto text-[12px] text-fg-3"><Placar d={d} /></span>
-              </span>
-              <span className="mt-0.5 line-clamp-2 text-[12px] text-fg-3">{d.ementa ?? d.principal.descricao}</span>
-            </a>
-          </li>
-        ))}
+        {itens.map((d, i) => {
+          const leitura = leituraDe(d);
+          return (
+            <li key={d.key} className={cn(i > 0 && "rowline")}>
+              <a href={votacaoHref(d.principal, { de: "lista" })} className="block rounded-md px-1 py-3 no-underline hover:bg-fg/5">
+                <span className="flex items-baseline gap-2 text-[12px]">
+                  <span className="tn text-fg-2">{formatDate(d.data)}</span>
+                  <span className="text-fg-4">{CASA[d.casa]}</span>
+                  <span className="ml-auto"><Veredito votacao={d.principal} /></span>
+                </span>
+                <span className="mt-1 line-clamp-3 text-[14px] font-medium leading-snug text-fg">{leitura.titulo}</span>
+                <span className="mt-1 flex items-baseline gap-2 text-[12px] text-fg-4">
+                  <Meta leitura={leitura} className="min-w-0 truncate" />
+                  <span className="ml-auto shrink-0 text-fg-3"><Placar d={d} /></span>
+                </span>
+              </a>
+            </li>
+          );
+        })}
       </ol>
     </>
   );

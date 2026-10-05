@@ -77,8 +77,8 @@ export function VoteStage({ votacao, assentos, tally, activeUf, onSelectUf }: {
   const pill = (
     <span className="surface inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-[13px]">
       <span className="truncate">
-        <b className="font-medium">{votacao.proposicao ?? "Votação"}</b> · {r.label.toLowerCase()}
-        {votacao.placar && votacao.placar.total > 0 && ` por ${votacao.placar.sim} a ${votacao.placar.nao}`}
+        <b className="font-medium">{r.label}</b>
+        {votacao.placar && votacao.placar.total > 0 && ` por ${votacao.placar.sim} votos a ${votacao.placar.nao}`}
       </span>
       <span className="shrink-0 text-fg-4">{votacao.casa === "camara" ? "Câmara" : "Senado"}</span>
     </span>

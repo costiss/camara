@@ -41,6 +41,17 @@ export function formatDateLong(value?: string | Date | null): string {
   return d ? dtLong.format(d) : "—";
 }
 
+const dtExtenso = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+
+/** "3 de setembro de 2026, às 17h28" — the time only when the value has one. */
+export function formatQuando(value?: string | null): string {
+  const d = toDate(value);
+  if (!d) return "—";
+  const data = dtExtenso.format(d);
+  if (!value || DATE_ONLY.test(value)) return data;
+  return `${data}, às ${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export function formatDateTime(value?: string | Date | null): string {
   if (typeof value === "string" && DATE_ONLY.test(value)) return formatDate(value);
   const d = toDate(value);

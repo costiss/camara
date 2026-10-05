@@ -6,6 +6,7 @@ import { useDeputados } from "@/hooks/useCamara";
 import { useSenadores } from "@/hooks/useSenado";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { router, useDebouncedValue, votacaoHref } from "@/hooks/useUi";
+import { tipoDaProposta, tituloPopular } from "@/lib/linguagem";
 import { formatDate } from "@/lib/format";
 import type { Parlamentar } from "@/lib/types";
 
@@ -114,8 +115,10 @@ export function SearchDialog({
                 }}
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-fg">{d.proposicao ?? "Votação"}</span>
-                  <span className="block truncate text-[12px] text-fg-3">{d.ementa ?? d.principal.descricao}</span>
+                  <span className="block truncate font-medium text-fg">{tituloPopular(d.ementa) || d.proposicao || "Votação no Plenário"}</span>
+                  <span className="block truncate text-[12px] text-fg-3">
+                    {[tipoDaProposta(d.proposicao)?.curto, d.proposicao].filter(Boolean).join(" · ")}
+                  </span>
                 </span>
                 <span className="text-[12px] text-fg-4">
                   {d.casa === "camara" ? "Câmara" : "Senado"} · {formatDate(d.data)}

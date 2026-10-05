@@ -1,18 +1,10 @@
 import { routeHref, votacaoHref } from "@/hooks/useUi";
-import { resultadoVotacao } from "@/lib/votos";
+import { Veredito } from "@/components/hud/proposta";
+import { lerVotacao } from "@/lib/linguagem";
 import type { Deliberacao } from "@/lib/deliberacoes";
-import type { Casa, StatusTone } from "@/lib/types";
+import type { Casa } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ErrorState, LoadingRows } from "@/components/shared";
-
-const TONE_COR: Record<StatusTone, string> = {
-  success: "var(--color-green)",
-  danger: "var(--color-red)",
-  warning: "var(--color-yellow)",
-  info: "var(--color-blue)",
-  accent: "var(--color-fg)",
-  neutral: "var(--color-fg-4)",
-};
 
 function quando(dataHora: string) {
   const d = new Date(dataHora.length <= 10 ? `${dataHora}T12:00:00` : dataHora);
@@ -23,31 +15,27 @@ function quando(dataHora: string) {
 
 function FeedItem({ d, current }: { d: Deliberacao; current: boolean }) {
   const v = d.principal;
-  const r = resultadoVotacao(v);
+  const leitura = lerVotacao({ ...v, ementa: d.ementa ?? v.ementa, proposicao: d.proposicao ?? v.proposicao });
   const { dia, hora } = quando(d.dataHora);
   const extra = d.votacoes.length - 1;
   return (
     <a href={votacaoHref(v)} className="ev no-underline" aria-current={current || undefined}>
-      <span className="tn pt-0.5 text-[12px] leading-tight text-fg-3">
+      <span className="tn pt-px text-[12px] leading-tight text-fg-3">
         {dia}
         {hora && <span className="block text-fg-5">{hora}</span>}
       </span>
-      <span
-        className="mt-0.5 grid h-[22px] w-[22px] place-items-center rounded-full border-2"
-        style={{ borderColor: TONE_COR[r.tone] }}
-        aria-hidden="true"
-      >
-        <span className="text-[9px] font-semibold text-fg-3">{d.casa === "camara" ? "C" : "S"}</span>
-      </span>
-      <span className="min-w-0 text-[13px] leading-snug">
-        {extra > 0 && <span className="block text-[12px] text-fg-3">+{extra} {extra === 1 ? "votação" : "votações"}</span>}
-        <span className="font-medium text-fg">{d.proposicao ?? (d.casa === "camara" ? "Câmara" : "Senado")}</span>{" "}
-        <span style={{ color: TONE_COR[r.tone] }}>{r.label.toLowerCase()}</span>
-        {v.placar && v.placar.total > 0 && (
-          <span className="tn text-fg-3"> · {v.placar.sim} a {v.placar.nao}</span>
-        )}
-        {v.secreta && <span className="text-fg-3"> · voto secreto</span>}
-        <span className="mt-0.5 line-clamp-2 text-[12px] text-fg-3">{d.ementa ?? v.descricao}</span>
+      <span className="min-w-0">
+        <span className="block truncate text-[11px] text-fg-4">
+          {d.casa === "camara" ? "Câmara" : "Senado"}
+          {leitura.tipo && ` · ${leitura.tipo.curto}`}
+          {extra > 0 && ` · ${extra + 1} etapas`}
+        </span>
+        <span className="mt-0.5 line-clamp-2 text-[13px] font-medium leading-snug text-fg">{leitura.titulo}</span>
+        <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[12px]">
+          <Veredito votacao={v} />
+          {v.placar && v.placar.total > 0 && <span className="tn text-fg-3">{v.placar.sim} a {v.placar.nao}</span>}
+          {v.secreta && <span className="text-fg-3">· secreta</span>}
+        </span>
       </span>
     </a>
   );

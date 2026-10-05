@@ -273,6 +273,25 @@
     letter-spacing: -0.01em;
     text-wrap: balance;
   }
+  .titulo-voto {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.012em;
+    color: var(--color-fg);
+    text-wrap: balance;
+  }
+  .titulo-voto-medio {
+    font-size: 23px;
+    line-height: 1.18;
+  }
+  .titulo-voto-longo {
+    font-size: 20px;
+    line-height: 1.22;
+    letter-spacing: -0.006em;
+    text-wrap: pretty;
+  }
   .fig {
     font-family: var(--font-serif);
     font-weight: 300;
@@ -484,7 +503,7 @@
   }
   .ev {
     display: grid;
-    grid-template-columns: 44px 28px minmax(0, 1fr);
+    grid-template-columns: 40px minmax(0, 1fr);
     gap: 8px;
     align-items: start;
     width: 100%;

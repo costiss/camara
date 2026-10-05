@@ -55,6 +55,15 @@ Old links such as `#/pecs` are rewritten to their list equivalent.
 
 ## How votes are read
 
+- Titles are written in everyday language from the official summary
+  (`src/lib/linguagem.ts`): legal boilerplate such as "Altera a Lei nº …, para"
+  or "Dispõe sobre" is dropped, extra credits read "Crédito extra de R$ 10
+  bilhões para …", urgency requests name the bill they speed up. The code
+  (`PLP 74/2026`) stays visible as secondary text next to the type in words,
+  and the official text is one click away.
+- Each vote is labelled by what it decided (texto principal, emenda, destaque,
+  urgência, redação final…), with a one-line explanation.
+
 - A Câmara vote id is `{idProposicao}-{seq}`: the prefix is the bill being voted,
   even when the description cites another numbering (e.g. the Senate's).
 - Votes are grouped into **deliberações** (same bill, same day); the principal

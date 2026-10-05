@@ -1,19 +1,11 @@
 import { ArrowLeft, ExternalLink } from "lucide-react";
+import { CodigoProposta, ExplicaTipo, TextoOficial, Veredito } from "@/components/hud/proposta";
 import { votacaoHref } from "@/hooks/useUi";
-import { formatDateTime, formatNumber } from "@/lib/format";
+import { formatNumber, formatQuando } from "@/lib/format";
+import { lerVotacao } from "@/lib/linguagem";
 import type { InspecaoVotacao } from "@/lib/inspecao";
 import type { Votacao } from "@/lib/types";
-import { cn } from "@/lib/utils";
-import { CADEIRAS, CATEGORIA_COR, CATEGORIA_LABEL, CATEGORIA_ORDEM, quorumDe, resultadoVotacao, type VoteTally } from "@/lib/votos";
-
-const TONE_TEXT: Record<string, string> = {
-  success: "text-green",
-  danger: "text-red",
-  warning: "text-yellow",
-  info: "text-blue",
-  accent: "text-fg",
-  neutral: "text-fg-3",
-};
+import { CADEIRAS, CATEGORIA_COR, CATEGORIA_LABEL, CATEGORIA_ORDEM, quorumDe, type VoteTally } from "@/lib/votos";
 
 function proposicaoUrl(v: Votacao): string | undefined {
   if (!v.proposicaoId) return undefined;
@@ -28,11 +20,11 @@ export function InspecaoResumo({ votacao, tally, inspecao, onVoto }: {
   inspecao: InspecaoVotacao;
   onVoto: (c: string) => void;
 }) {
-  const r = resultadoVotacao(votacao);
+  const leitura = lerVotacao(votacao);
   const contagem = inspecao.contagem;
   const total = inspecao.assentos.length;
   const quorum = quorumDe(votacao.casa, votacao.proposicaoTipo);
-  const casa = votacao.casa === "camara" ? "Câmara" : "Senado";
+  const casa = votacao.casa === "camara" ? "Câmara dos Deputados" : "Senado Federal";
   const urlProposicao = proposicaoUrl(votacao);
 
   return (
@@ -40,23 +32,18 @@ export function InspecaoResumo({ votacao, tally, inspecao, onVoto }: {
       <a href={votacaoHref(votacao)} className="inline-flex items-center gap-1 text-[12px] text-fg-3 no-underline hover:text-fg">
         <ArrowLeft className="h-3.5 w-3.5" /> Painel da votação
       </a>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <span className="label">{casa} · Plenário · inspeção</span>
-        <span className="chip">
-          <span className={cn("h-1.5 w-1.5 rounded-full bg-current", TONE_TEXT[r.tone])} />
-          {r.label}
-        </span>
-      </div>
-      <h1 id="inspecao-title" className="manchete mt-4">
-        <span className={TONE_TEXT[r.tone]}>{votacao.proposicao ?? "Votação"}</span>
-      </h1>
-      <p className="mt-1 text-[12px] text-fg-3">{formatDateTime(votacao.dataHora ?? votacao.data).replace(", ", " às ")}</p>
-      {votacao.ementa && <p className="mt-3 text-[12px] leading-relaxed text-fg-2">{votacao.ementa}</p>}
+      <p className="label mt-3">{casa} · {formatQuando(votacao.dataHora ?? votacao.data)}</p>
+      <Veredito votacao={votacao} className="mt-4 text-[14px]" />
+      <h1 id="inspecao-title" className="titulo-voto titulo-voto-medio mt-1.5">{leitura.titulo}</h1>
+      <CodigoProposta leitura={leitura} className="mt-2 block text-[13px] text-fg-3" />
+      {leitura.tipo && <ExplicaTipo tipo={leitura.tipo} className="mt-1.5" />}
 
-      <div className="mt-4 border-t border-line pt-3">
-        <p className="label text-[11px]">O que foi votado</p>
-        <p className="mt-1 text-[12px] leading-relaxed text-fg-3">{votacao.descricao}</p>
+      <div className="mt-4 rounded-[10px] bg-panel-2 px-3 py-2.5">
+        <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-fg-4">Em votação</p>
+        <p className="mt-0.5 text-[14px] font-medium text-fg">{leitura.etapa.rotulo}</p>
+        <p className="mt-0.5 text-[12px] leading-relaxed text-fg-3">{leitura.etapa.explica}</p>
       </div>
+      <TextoOficial ementa={votacao.ementa} descricao={votacao.descricao} className="mt-3" />
 
       {total > 0 && (
         <div className="mt-4 border-t border-line pt-3">

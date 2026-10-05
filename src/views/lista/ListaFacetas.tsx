@@ -1,6 +1,7 @@
 import { BarRowsSkeleton } from "@/components/hud/skeletons";
 import type { Deliberacao } from "@/lib/deliberacoes";
 import { FiltroVotacoes, type ResultadoFiltro } from "@/lib/filtroVotacoes";
+import { tipoDaProposta } from "@/lib/linguagem";
 import { formatNumber } from "@/lib/format";
 import type { Periodo } from "@/lib/periodo";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,7 @@ const RESULTADO_COR: Record<Exclude<ResultadoFiltro, "todos">, string> = {
 };
 
 function Faceta({ label, n, max, cor, ativo, onClick }: {
-  label: string;
+  label: React.ReactNode;
   n: number;
   max: number;
   cor: string;
@@ -97,7 +98,7 @@ export function ListaFacetas({ filtro, deliberacoes, total, periodo, isLoading, 
 
       <section className="card" aria-label="Filtrar por tipo de proposição">
         <div className="card-head">
-          <h2>Tipo</h2>
+          <h2>Tipo de proposta</h2>
           {filtro.tipo ? (
             <button type="button" className="meta link" onClick={() => definir({ tipo: null })}>Limpar</button>
           ) : (
@@ -109,7 +110,12 @@ export function ListaFacetas({ filtro, deliberacoes, total, periodo, isLoading, 
         {!isLoading && porTipo.map(([tipo, n], i) => (
           <div key={tipo} className={cn(i > 0 && "rowline")}>
             <Faceta
-              label={tipo}
+              label={
+                <>
+                  {tipoDaProposta(tipo)?.curto ?? tipo}
+                  <span className="ml-1.5 text-[11px] text-fg-5">{tipo}</span>
+                </>
+              }
               n={n}
               max={maxTipo}
               cor="var(--color-fg-3)"
