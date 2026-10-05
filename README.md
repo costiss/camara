@@ -1,32 +1,85 @@
-# React + TypeScript + Vite
+# Congresso Aberto
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A dark, editorial single-page app for following the Brazilian National Congress:
+**PECs**, floor votes, agendas and the composition of the **Câmara dos Deputados**
+and the **Senado Federal** — built from the official open-data APIs.
 
-Currently, two official plugins are available:
+Visual language inspired by [seuimposto.com](https://seuimposto.com/): glass
+surfaces, hairline borders, big serif figures, tabular numbers, restrained colour.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+- **React 19 + TypeScript + Vite**
+- **Tailwind CSS v4** (design tokens in `src/index.css`)
+- **shadcn-style UI primitives** built on **Radix UI** (`src/components/ui`)
+- **TanStack Query** for caching, retries and background refresh
+- **Recharts** for the distribution and historical charts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the Oxlint configuration
+- **Visão geral** — live KPIs, recent floor votes from both houses, upcoming
+  sessions, latest PECs, party composition and historical trends.
+- **PECs** — Câmara **and** Senate propositions in one place, with house/year
+  filters, full-text search and pagination.
+- **Agenda & votações** — upcoming Câmara sessions with their **pauta**
+  (agenda items), recent Câmara votes and recent Senate nominal votes.
+- **Deputados / Senadores** — search, party/state filters, bancada overview and
+  per-member detail (profile, recent propositions or votes).
+- **Atividades** — a unified activity feed (votes, propositions, sessions)
+  filterable by kind.
+- **Métricas** — party and state distributions for both houses, PEC status
+  breakdown, vote outcomes and historical series (PECs per year, votes per month).
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Detail sheets expose the legislative history:
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+- **PEC / proposição** — tramitação timeline, autoria and related votes (Câmara);
+  situation and authorship (Senado).
+- **Parlamentar** — profile plus recent authored propositions (deputy) or
+  nominal votes (senator).
+- **Votação** — result, scoreboard and the individual roll-call, grouped by vote.
+
+## Data sources
+
+| Source | Base URL | Notes |
+| --- | --- | --- |
+| Câmara dos Deputados | `https://dadosabertos.camara.leg.br/api/v2` | Deputies (513), parties, propositions, tramitações, autores, votações + votos, eventos + pauta. Sends `X-Total-Count`, used for historical counts. |
+| Senado Federal | `https://legis.senado.leg.br/dadosabertos` | Senators (81), senator votes, recent floor votes (`/votacao`) and propositions (`/processo`). |
+
+Both APIs return `Access-Control-Allow-Origin: *`. The Câmara API rate-limits
+bursts, so the adapter runs its requests through a small concurrency limiter and
+the query client retries with backoff.
+
+The API layer lives in `src/lib/api`:
+
+- `camara.ts` / `senado.ts` — adapters that normalise the two very different
+  payloads into the shared model in `src/lib/types.ts`.
+- `http.ts` — fetch helpers, `X-Total-Count` parsing and the limiter.
+
+## Project structure
+
+```
+src/
+├── components/
+│   ├── ui/         shadcn-style primitives (Radix based)
+│   ├── layout/     app shell, sidebar, top bar
+│   ├── shared/     cards, badges, charts, KPIs, feeds
+│   └── detail/     proposition / member / vote sheets
+├── hooks/          TanStack Query hooks + tiny hash router
+├── lib/            api adapters, domain types, formatters, aggregates
+└── pages/          one component per route
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Navigation uses a dependency-free hash router (`src/hooks/useUi.ts`), so deep
+links work (`#/pecs`, `#/agenda`, …).
+
+## Getting started
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # type-check + production build
+npm run lint
+```
+
+No API keys or backend are required — the browser talks to the official APIs
+directly.

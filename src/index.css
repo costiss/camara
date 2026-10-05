@@ -1,42 +1,68 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ *
+ * Design tokens — derived from the dark editorial "HUD" language of
+ * seuimposto.com: glass surfaces, hairline borders, big serif figures.
+ * ------------------------------------------------------------------ */
 @theme {
-  --color-bg: #0F0E0D;
+  /* Surfaces */
+  --color-bg: #0f0e0d;
+  --color-bg-2: #0b0a09;
   --color-panel: #151412;
-  --color-panel-2: #1B1A17;
-  --color-panel-3: #22201D;
+  --color-panel-2: #1b1a17;
+  --color-panel-3: #22201d;
   --color-glass: rgba(21, 20, 18, 0.84);
   --color-line: rgba(250, 250, 249, 0.08);
   --color-line-2: rgba(250, 250, 249, 0.16);
   --color-line-3: rgba(250, 250, 249, 0.25);
-  --color-fg: #FAFAF9;
-  --color-fg-2: #D6D4CF;
-  --color-fg-3: #A6A39C;
-  --color-fg-4: #85827C;
-  --color-fg-5: #6F6C66;
-  --color-accent: #D4A853;
-  --color-accent-dim: rgba(212, 168, 83, 0.15);
-  --color-green: #4ADE80;
-  --color-red: #F87171;
-  --color-blue: #60A5FA;
-  --color-yellow: #FBBF24;
-  --color-purple: #C084FC;
-  --color-orange: #FB923C;
-  --color-teal: #2DD4BF;
-  --color-pink: #F472B6;
+
+  /* Type */
+  --color-fg: #fafaf9;
+  --color-fg-2: #d6d4cf;
+  --color-fg-3: #a6a39c;
+  --color-fg-4: #85827c;
+  --color-fg-5: #6f6c66;
+
+  /* Accent (used sparingly) */
+  --color-accent: #d4a853;
+  --color-accent-2: #e8c87e;
+  --color-accent-dim: rgba(212, 168, 83, 0.14);
+
+  /* Semantic */
+  --color-green: #4ade80;
+  --color-red: #f87171;
+  --color-blue: #60a5fa;
+  --color-yellow: #fbbf24;
+  --color-purple: #c084fc;
+  --color-orange: #fb923c;
+  --color-teal: #2dd4bf;
+  --color-pink: #f472b6;
+  --color-lime: #a3e635;
 
   --font-serif: "Faustina", Georgia, "Times New Roman", serif;
   --font-sans: "Geist", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-io: cubic-bezier(0.7, 0, 0.3, 1);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --radius-card: 16px;
+}
+
+:root {
+  color-scheme: dark;
+  --t-fig: 34px;
+  --t-fig-lg: 44px;
+  --h-topbar: 56px;
+  --h-rail: 232px;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   height: 100%;
   overflow: hidden;
@@ -59,26 +85,29 @@ body {
   font: 400 13px/1.45 var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
 }
 
 button {
-  font: inherit;
-  color: inherit;
   touch-action: manipulation;
+  cursor: pointer;
 }
 
-h1, h2, h3, p {
+h1,
+h2,
+h3,
+h4,
+p {
   margin: 0;
 }
-
-.tn {
-  font-variant-numeric: tabular-nums;
-}
-
-.f2 { color: var(--color-fg-2); }
-.f3 { color: var(--color-fg-3); }
-.f4 { color: var(--color-fg-4); }
-.f5 { color: var(--color-fg-5); }
 
 ::selection {
   background: rgba(250, 250, 249, 0.2);
@@ -87,4 +116,371 @@ h1, h2, h3, p {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+@layer components {
+  /* Surfaces -------------------------------------------------------- */
+  .surface {
+    background: var(--color-glass);
+    -webkit-backdrop-filter: blur(18px) saturate(1.15);
+    backdrop-filter: blur(18px) saturate(1.15);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+
+  .surface-hover {
+    transition: background-color 0.14s var(--ease), border-color 0.14s var(--ease),
+      transform 0.14s var(--ease);
+  }
+  .surface-hover:hover {
+    border-color: var(--color-line-2);
+    background: rgba(34, 32, 29, 0.72);
+  }
+
+  /* Buttons --------------------------------------------------------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 15px;
+    border-radius: 100px;
+    border: 1px solid var(--color-line-2);
+    background: rgba(21, 20, 18, 0.6);
+    color: var(--color-fg);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color 0.14s var(--ease), border-color 0.14s var(--ease),
+      color 0.14s var(--ease);
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--color-panel-2);
+    border-color: var(--color-line-3);
+  }
+  .btn:disabled {
+    cursor: default;
+    color: var(--color-fg-5);
+    border-color: var(--color-line);
+  }
+  .btn-sm {
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  .btn-ghost {
+    border-color: transparent;
+    background: none;
+    color: var(--color-fg-3);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: rgba(250, 250, 249, 0.06);
+    border-color: transparent;
+    color: var(--color-fg);
+  }
+  .btn-accent {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #1a1509;
+  }
+  .btn-accent:hover:not(:disabled) {
+    background: var(--color-accent-2);
+    border-color: var(--color-accent-2);
+  }
+
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    color: var(--color-fg-3);
+    background: none;
+    transition: background-color 0.14s var(--ease), color 0.14s var(--ease),
+      border-color 0.14s var(--ease);
+  }
+  .icon-btn:hover {
+    background: rgba(250, 250, 249, 0.08);
+    color: var(--color-fg);
+  }
+  .icon-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+    background: none;
+  }
+
+  /* Segmented control ---------------------------------------------- */
+  .seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 100px;
+    border: 1px solid var(--color-line);
+    background: rgba(27, 26, 23, 0.72);
+  }
+  .seg > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 100px;
+    border: none;
+    background: none;
+    color: var(--color-fg-3);
+    font-weight: 500;
+    font-size: 12px;
+    white-space: nowrap;
+    transition: background-color 0.14s var(--ease), color 0.14s var(--ease);
+  }
+  .seg > button:hover {
+    color: var(--color-fg);
+  }
+  .seg > button[data-active="true"] {
+    background: var(--color-panel-3);
+    color: var(--color-fg);
+    box-shadow: inset 0 0 0 1px var(--color-line-2);
+  }
+
+  /* Form fields ----------------------------------------------------- */
+  .field {
+    height: 34px;
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid var(--color-line);
+    background: rgba(27, 26, 23, 0.6);
+    padding: 0 12px;
+    color: var(--color-fg);
+    font-size: 12px;
+    transition: border-color 0.14s var(--ease), background-color 0.14s var(--ease);
+  }
+  .field::placeholder {
+    color: var(--color-fg-5);
+  }
+  .field:focus {
+    outline: none;
+    border-color: rgba(212, 168, 83, 0.5);
+    background: var(--color-panel-2);
+  }
+  select.field {
+    appearance: none;
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2385827C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  select.field option {
+    background: var(--color-panel-2);
+    color: var(--color-fg);
+  }
+
+  /* Typography helpers --------------------------------------------- */
+  .fig {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: var(--t-fig);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-fg-4);
+  }
+  .section-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 17px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  /* Bars ------------------------------------------------------------ */
+  .track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-panel-3);
+    overflow: hidden;
+  }
+  .track > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s var(--ease-out);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 999px;
+    border: 1px solid var(--color-line-2);
+    background: rgba(27, 26, 23, 0.6);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-fg-2);
+    white-space: nowrap;
+  }
+
+  /* Timeline -------------------------------------------------------- */
+  .timeline {
+    position: relative;
+    padding-left: 20px;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: var(--color-line-2);
+  }
+  .timeline-item {
+    position: relative;
+    padding-bottom: 16px;
+  }
+  .timeline-item:last-child {
+    padding-bottom: 0;
+  }
+  .timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -20px;
+    top: 5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--color-panel-3);
+    border: 2px solid var(--color-fg-4);
+  }
+  .timeline-item[data-current="true"]::before {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 4px var(--color-accent-dim);
+  }
+}
+
+@layer utilities {
+  .tn {
+    font-variant-numeric: tabular-nums;
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    user-select: none;
+  }
+  .f2 {
+    color: var(--color-fg-2);
+  }
+  .f3 {
+    color: var(--color-fg-3);
+  }
+  .f4 {
+    color: var(--color-fg-4);
+  }
+  .f5 {
+    color: var(--color-fg-5);
+  }
+  .fade-mask {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+  }
+}
+
+@keyframes enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.enter {
+  animation: enter 0.5s var(--ease-out) both;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes sheet-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes sheet-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(74, 222, 128, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+.live-dot {
+  animation: live-pulse 2s infinite;
 }

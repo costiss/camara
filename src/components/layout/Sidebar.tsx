@@ -1,73 +1,119 @@
 import { cn } from "@/lib/utils";
+import { navigate, useRoute } from "@/hooks/useUi";
 import {
-  Landmark,
-  FileText,
-  Users,
+  Activity,
   BarChart3,
-  Home,
-  ScrollText,
+  CalendarClock,
+  FileText,
+  Landmark,
+  LayoutDashboard,
+  Users,
+  type LucideIcon,
 } from "lucide-react";
 
-interface SidebarProps {
-  active: string;
-  onNavigate: (page: string) => void;
+interface NavItem {
+  id: string;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
 }
 
-const navItems = [
-  { id: "dashboard", label: "Visão Geral", icon: Home },
-  { id: "pecs", label: "PECs", icon: FileText },
-  { id: "deputados", label: "Deputados", icon: Users },
-  { id: "senadores", label: "Senadores", icon: Landmark },
-  { id: "metricas", label: "Métricas", icon: BarChart3 },
-  { id: "atividades", label: "Atividades", icon: ScrollText },
+export const NAV_ITEMS: NavItem[] = [
+  { id: "dashboard", label: "Visão geral", hint: "Resumo ao vivo", icon: LayoutDashboard },
+  { id: "pecs", label: "PECs", hint: "Emendas à Constituição", icon: FileText },
+  { id: "agenda", label: "Agenda & votações", hint: "Próximas e recentes", icon: CalendarClock },
+  { id: "deputados", label: "Deputados", hint: "Câmara", icon: Users },
+  { id: "senadores", label: "Senadores", hint: "Senado Federal", icon: Landmark },
+  { id: "atividades", label: "Atividades", hint: "Movimentações", icon: Activity },
+  { id: "metricas", label: "Métricas", hint: "Distribuições", icon: BarChart3 },
 ];
 
-export function Sidebar({ active, onNavigate }: SidebarProps) {
+function Brand() {
   return (
-    <aside className="fixed left-0 top-0 z-40 h-full w-56 border-r border-line bg-panel/50 backdrop-blur-md">
-      <div className="flex h-full flex-col">
-        <div className="flex items-center gap-2.5 border-b border-line px-5 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/15">
-            <Landmark className="h-4 w-4 text-accent" />
-          </div>
-          <div>
-            <h1 className="font-serif text-base font-semibold tracking-tight text-fg">
-              Congresso
-            </h1>
-            <p className="text-[10px] uppercase tracking-widest text-fg-5">
-              Dados Abertos
-            </p>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = active === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] transition-all duration-150",
-                  isActive
-                    ? "bg-accent/10 text-accent"
-                    : "text-fg-3 hover:bg-panel-2 hover:text-fg"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-line p-4">
-          <p className="text-[10px] leading-relaxed text-fg-5">
-            Dados oficiais da Câmara dos Deputados e Senado Federal
-          </p>
-        </div>
+    <div className="flex items-center gap-2.5">
+      <div className="grid h-9 w-9 place-items-center rounded-xl border border-accent/25 bg-accent-dim">
+        <Landmark className="h-4.5 w-4.5 text-accent" />
       </div>
+      <div className="leading-tight">
+        <p className="font-serif text-[15px] font-medium tracking-tight text-fg">
+          Congresso Aberto
+        </p>
+        <p className="text-[10px] uppercase tracking-[0.18em] text-fg-5">
+          Câmara · Senado
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const route = useRoute();
+
+  const go = (id: string) => {
+    navigate(id);
+    onNavigate?.();
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="px-4 py-4">
+        <Brand />
+      </div>
+
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
+        {NAV_ITEMS.map((item) => {
+          const active = route === item.id;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => go(item.id)}
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150",
+                active
+                  ? "bg-panel-2 shadow-[inset_0_0_0_1px_var(--color-line-2)]"
+                  : "hover:bg-panel-2/60"
+              )}
+            >
+              <Icon
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-colors",
+                  active ? "text-accent" : "text-fg-4 group-hover:text-fg-2"
+                )}
+              />
+              <span className="min-w-0 flex-1">
+                <span
+                  className={cn(
+                    "block truncate text-[12.5px] font-medium",
+                    active ? "text-fg" : "text-fg-2 group-hover:text-fg"
+                  )}
+                >
+                  {item.label}
+                </span>
+                <span className="block truncate text-[10px] text-fg-5">{item.hint}</span>
+              </span>
+              {active && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-line px-4 py-3.5">
+        <p className="text-[10px] leading-relaxed text-fg-5">
+          Dados abertos oficiais da Câmara dos Deputados e do Senado Federal.
+        </p>
+        <p className="mt-1.5 text-[10px] text-fg-5">
+          Atualização automática a cada acesso.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <aside className="fixed left-0 top-0 z-40 hidden h-full w-[232px] border-r border-line bg-panel/40 backdrop-blur-xl lg:block">
+      <SidebarContent />
     </aside>
   );
 }

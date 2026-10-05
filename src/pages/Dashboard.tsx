@@ -1,274 +1,355 @@
-import { useProposicoes } from "@/hooks/useProposicoes";
-import { useDeputados } from "@/hooks/useDeputados";
-import { useSenadores } from "@/hooks/useSenadores";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useMemo, useState } from "react";
 import {
+  CalendarClock,
   FileText,
-  Users,
+  Gavel,
   Landmark,
   TrendingUp,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
+  Users,
 } from "lucide-react";
+import {
+  useDeputados,
+  useEventos,
+  usePecCounts,
+  useProposicoes,
+  useVotacoes,
+  useVotacoesMensais,
+} from "@/hooks/useCamara";
+import { useSenadoVotacoes, useSenadores } from "@/hooks/useSenado";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  DistributionBars,
+  Donut,
+  EmptyState,
+  EventoAgendaCard,
+  KpiCard,
+  LoadingRows,
+  ProposicoesList,
+  SectionHeader,
+  TrendArea,
+  VotacaoRow,
+} from "@/components/shared";
+import { ProposicaoDetail } from "@/components/detail/ProposicaoDetail";
+import { VotacaoDetail } from "@/components/detail/VotacaoDetail";
+import { distributionBy } from "@/lib/aggregate";
+import { partyColor } from "@/lib/parties";
+import { addDays, formatMonth, isoDate, startOfDay } from "@/lib/format";
+import type { Proposicao, Votacao } from "@/lib/types";
 
 export function Dashboard() {
-  const { data: pecsData, isLoading: pecsLoading } = useProposicoes({
-    siglaTipo: "PEC",
-    itens: 10,
-  });
-  const { data: deputadosData, isLoading: depLoading } = useDeputados({
-    itens: 500,
-  });
-  const { data: senadoresData, isLoading: senLoading } = useSenadores();
+  const hoje = startOfDay();
+  const ha90 = addDays(hoje, -90);
+  const em14 = addDays(hoje, 14);
+  const anoAtual = hoje.getFullYear();
 
-  const pecs = (pecsData?.dados ?? []) as Array<{
-    id: number;
-    numero: number;
-    ano: number;
-    ementa: string;
-    dataApresentacao: string;
-    statusProposicao?: { descricaoSituacao?: string };
-  }>;
-  const deputados = (deputadosData?.dados ?? []) as Array<{
-    siglaPartido: string;
-    siglaUf: string;
-  }>;
-  const senadores = (senadoresData?.dados ?? []) as Array<{
-    siglaPartido: string;
-    siglaUf: string;
-  }>;
+  const [selectedPec, setSelectedPec] = useState<Proposicao | null>(null);
+  const [selectedVotacao, setSelectedVotacao] = useState<Votacao | null>(null);
 
-  const partyCount = deputados.reduce(
-    (acc, d) => {
-      acc[d.siglaPartido] = (acc[d.siglaPartido] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
+  const deputadosQ = useDeputados();
+  const senadoresQ = useSenadores();
+
+  const pecsAnoQ = useProposicoes({
+    tipo: "PEC",
+    ano: anoAtual,
+    itens: 1,
+    ordem: "DESC",
+    ordenarPor: "id",
+  });
+  const pecsRecentesQ = useProposicoes({
+    tipo: "PEC",
+    itens: 6,
+    ordem: "DESC",
+    ordenarPor: "id",
+  });
+  const votacoesQ = useVotacoes({
+    dataInicio: isoDate(ha90),
+    dataFim: isoDate(hoje),
+    itens: 6,
+  });
+  const eventosQ = useEventos({
+    dataInicio: isoDate(hoje),
+    dataFim: isoDate(em14),
+    itens: 40,
+  });
+  const senadoVotosQ = useSenadoVotacoes();
+
+  const anos = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => anoAtual - 6 + i),
+    [anoAtual]
+  );
+  const pecCounts = usePecCounts(anos);
+
+  const meses = useMemo(
+    () =>
+      Array.from({ length: 6 }, (_, i) => {
+        const start = new Date(hoje.getFullYear(), hoje.getMonth() - 5 + i, 1);
+        const end = new Date(hoje.getFullYear(), hoje.getMonth() - 4 + i, 0);
+        return {
+          inicio: isoDate(start),
+          fim: isoDate(end),
+          label: formatMonth(start),
+        };
+      }),
+    [hoje]
+  );
+  const votosMes = useVotacoesMensais(meses);
+
+  const deputados = useMemo(() => deputadosQ.data ?? [], [deputadosQ.data]);
+  const senadores = useMemo(() => senadoresQ.data ?? [], [senadoresQ.data]);
+  const pecsRecentes = useMemo(
+    () => pecsRecentesQ.data?.items ?? [],
+    [pecsRecentesQ.data]
+  );
+  const votacoes = useMemo(() => votacoesQ.data?.items ?? [], [votacoesQ.data]);
+
+  const distribuicaoDep = useMemo(
+    () => distributionBy(deputados, (d) => d.partido, 8),
+    [deputados]
   );
 
-  const topParties = Object.entries(partyCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+  const agenda = useMemo(() => {
+    const now = Date.now();
+    return (eventosQ.data ?? [])
+      .filter((e) => new Date(e.inicio).getTime() >= now - 60 * 60 * 1000)
+      .sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime())
+      .slice(0, 5);
+  }, [eventosQ.data]);
 
-  const ufCount = deputados.reduce(
-    (acc, d) => {
-      acc[d.siglaUf] = (acc[d.siglaUf] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+  const feed = useMemo(() => {
+    const senado = (senadoVotosQ.data ?? []).slice(0, 4);
+    return [...votacoes, ...senado]
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+      .slice(0, 6);
+  }, [votacoes, senadoVotosQ.data]);
 
-  const topUfs = Object.entries(ufCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+  const pecTrend = pecCounts.data.map((d) => ({ label: String(d.ano), total: d.total }));
+  const votosTrend = votosMes.data.map((d) => ({ label: d.label, total: d.total }));
+  const totalPecs = pecsAnoQ.data?.total ?? 0;
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-fg-4">
-              PECs em Tramitação
-            </CardTitle>
-            <FileText className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            {pecsLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="tn font-serif text-2xl font-semibold text-fg">
-                {pecs.length}
-              </div>
-            )}
-            <p className="text-[11px] text-fg-5">proposições recentes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-fg-4">
-              Deputados
-            </CardTitle>
-            <Users className="h-4 w-4 text-blue" />
-          </CardHeader>
-          <CardContent>
-            {depLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="tn font-serif text-2xl font-semibold text-fg">
-                {deputados.length}
-              </div>
-            )}
-            <p className="text-[11px] text-fg-5">câmara dos deputados</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-fg-4">
-              Senadores
-            </CardTitle>
-            <Landmark className="h-4 w-4 text-purple" />
-          </CardHeader>
-          <CardContent>
-            {senLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="tn font-serif text-2xl font-semibold text-fg">
-                {senadores.length}
-              </div>
-            )}
-            <p className="text-[11px] text-fg-5">senado federal</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-fg-4">
-              Partidos
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green" />
-          </CardHeader>
-          <CardContent>
-            {depLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="tn font-serif text-2xl font-semibold text-fg">
-                {Object.keys(partyCount).length}
-              </div>
-            )}
-            <p className="text-[11px] text-fg-5">com representação</p>
-          </CardContent>
-        </Card>
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <KpiCard
+          label={`PECs em ${anoAtual}`}
+          value={totalPecs}
+          icon={FileText}
+          tone="accent"
+          loading={pecsAnoQ.isLoading}
+          hint="apresentadas"
+        />
+        <KpiCard
+          label="Deputados"
+          value={deputados.length}
+          icon={Users}
+          tone="info"
+          loading={deputadosQ.isLoading}
+          hint="em exercício"
+        />
+        <KpiCard
+          label="Senadores"
+          value={senadores.length}
+          icon={Landmark}
+          tone="accent"
+          loading={senadoresQ.isLoading}
+          hint="em exercício"
+        />
+        <KpiCard
+          label="Votações · 90d"
+          value={votacoesQ.data?.total ?? votacoes.length}
+          icon={Gavel}
+          tone="success"
+          loading={votacoesQ.isLoading}
+          hint="plenário e comissões"
+        />
+        <KpiCard
+          label="Partidos"
+          value={Object.keys(
+            deputados.reduce<Record<string, number>>((acc, d) => {
+              acc[d.partido] = 1;
+              return acc;
+            }, {})
+          ).length}
+          icon={TrendingUp}
+          loading={deputadosQ.isLoading}
+          hint="na Câmara"
+          className="col-span-2 lg:col-span-1"
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Feed + Agenda */}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>PECs Recentes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {pecsLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))
-            ) : (
-              pecs.slice(0, 5).map((pec) => (
-                <div
-                  key={pec.id}
-                  className="flex items-start justify-between gap-3 rounded-md border border-line bg-panel-2 p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="tn text-xs font-medium text-fg">
-                        PEC {pec.numero}/{pec.ano}
-                      </span>
-                      <StatusBadge status={pec.statusProposicao?.descricaoSituacao} />
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-fg-4">
-                      {pec.ementa}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-[10px] text-fg-5">
-                    {new Date(pec.dataApresentacao).toLocaleDateString("pt-BR")}
-                  </span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribuição por Partido</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {depLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-8 w-full" />
-              ))
-            ) : (
-              topParties.map(([party, count]) => (
-                <div key={party} className="flex items-center gap-3">
-                  <span className="tn w-12 text-xs font-medium text-fg-2">
-                    {party}
-                  </span>
-                  <div className="flex-1">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-panel-3">
-                      <div
-                        className="h-full rounded-full bg-accent transition-all duration-500"
-                        style={{
-                          width: `${(count / deputados.length) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <span className="tn w-8 text-right text-xs text-fg-4">
-                    {count}
-                  </span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Estados com Mais Representantes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {depLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {topUfs.map(([uf, count]) => (
-                <div
-                  key={uf}
-                  className="rounded-md border border-line bg-panel-2 p-3 text-center"
-                >
-                  <div className="tn font-serif text-lg font-semibold text-fg">
-                    {count}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider text-fg-5">
-                    {uf}
-                  </div>
-                </div>
-              ))}
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Gavel className="h-4 w-4 text-accent" />
+                Votações recentes
+              </CardTitle>
+              <p className="mt-0.5 text-[11px] text-fg-4">
+                Últimos 90 dias · Câmara e Senado
+              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {votacoesQ.isLoading ? (
+              <LoadingRows rows={4} height={92} />
+            ) : feed.length === 0 ? (
+              <EmptyState title="Sem votações no período" icon={Gavel} />
+            ) : (
+              feed.map((v) => (
+                <VotacaoRow key={v.id} v={v} onOpen={setSelectedVotacao} />
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-blue" />
+                Agenda das próximas sessões
+              </CardTitle>
+              <p className="mt-0.5 text-[11px] text-fg-4">
+                Próximos 14 dias · Câmara dos Deputados
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {eventosQ.isLoading ? (
+              <LoadingRows rows={4} height={84} />
+            ) : agenda.length === 0 ? (
+              <EmptyState
+                title="Nenhuma sessão agendada"
+                description="A Câmara ainda não publicou sessões deliberativas para os próximos dias."
+                icon={CalendarClock}
+              />
+            ) : (
+              agenda.map((e) => <EventoAgendaCard key={e.id} e={e} />)
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* PECs + distribuição */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-accent" />
+                PECs mais recentes
+              </CardTitle>
+              <p className="mt-0.5 text-[11px] text-fg-4">
+                Propostas de Emenda à Constituição
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {pecsRecentesQ.isLoading ? (
+              <LoadingRows rows={4} height={96} />
+            ) : pecsRecentes.length === 0 ? (
+              <EmptyState title="Sem PECs recentes" icon={FileText} />
+            ) : (
+              <ProposicoesList
+                items={pecsRecentes}
+                onOpen={setSelectedPec}
+                className="space-y-2"
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>Distribuição por partido</CardTitle>
+              <p className="mt-0.5 text-[11px] text-fg-4">
+                {deputados.length} deputados em exercício
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {deputadosQ.isLoading ? (
+              <LoadingRows rows={6} height={30} />
+            ) : (
+              <DistributionBars
+                items={distribuicaoDep}
+                total={deputados.length}
+                colorFor={partyColor}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tendências */}
+      <div>
+        <SectionHeader
+          title="Dados históricos"
+          description="Evolução da produção legislativa ao longo do tempo"
+          className="mb-3"
+        />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>PECs por ano</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pecCounts.isLoading ? (
+                <LoadingRows rows={1} height={220} />
+              ) : (
+                <TrendArea data={pecTrend} color="#d4a853" />
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Votações por mês</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {votosMes.isLoading ? (
+                <LoadingRows rows={1} height={220} />
+              ) : (
+                <TrendArea data={votosTrend} color="#60a5fa" />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {deputados.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Bancadas por partido — participação</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Donut
+              items={distribuicaoDep}
+              centerLabel="deputados"
+              centerValue={deputados.length}
+              colorFor={partyColor}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      <ProposicaoDetail
+        proposicao={selectedPec}
+        open={!!selectedPec}
+        onOpenChange={(o) => !o && setSelectedPec(null)}
+      />
+      <VotacaoDetail
+        votacao={selectedVotacao}
+        open={!!selectedVotacao}
+        onOpenChange={(o) => !o && setSelectedVotacao(null)}
+      />
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
-
-  const s = status.toLowerCase();
-  let variant: "default" | "success" | "danger" | "warning" | "info" = "default";
-  let icon = <Clock className="h-3 w-3" />;
-
-  if (s.includes("aprovad") || s.includes("promulgad")) {
-    variant = "success";
-    icon = <CheckCircle2 className="h-3 w-3" />;
-  } else if (s.includes("rejeitad") || s.includes("arquivad") || s.includes("encerrad")) {
-    variant = "danger";
-    icon = <XCircle className="h-3 w-3" />;
-  } else if (s.includes("tramita") || s.includes("aguardando")) {
-    variant = "warning";
-    icon = <AlertCircle className="h-3 w-3" />;
-  }
-
-  return (
-    <Badge variant={variant} className="gap-1 text-[10px]">
-      {icon}
-      {status.length > 20 ? status.slice(0, 20) + "…" : status}
-    </Badge>
   );
 }

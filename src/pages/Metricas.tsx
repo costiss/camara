@@ -1,271 +1,241 @@
 import { useMemo } from "react";
-import { useDeputados } from "@/hooks/useDeputados";
-import { useSenadores } from "@/hooks/useSenadores";
-import { useProposicoes } from "@/hooks/useProposicoes";
+import { useDeputados, usePecCounts, useProposicaoDetalhes, useProposicoes, useVotacoes, useVotacoesMensais } from "@/hooks/useCamara";
+import { useSenadores } from "@/hooks/useSenado";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
+  Donut,
+  ErrorState,
+  HorizontalBars,
+  KpiCard,
+  LoadingRows,
+  TrendArea,
+} from "@/components/shared";
+import { distributionBy } from "@/lib/aggregate";
+import { statusTone } from "@/lib/parties";import { addDays, formatMonth, isoDate, startOfDay } from "@/lib/format";
 
-const COLORS = [
-  "#D4A853",
-  "#60A5FA",
-  "#4ADE80",
-  "#F87171",
-  "#C084FC",
-  "#FB923C",
-  "#2DD4BF",
-  "#F472B6",
-  "#FBBF24",
-  "#A3E635",
-];
+const UF_COLOR = "#60a5fa";
+
+function statusColor(name: string): string {
+  const tone = statusTone(name);
+  if (tone === "success") return "var(--color-green)";
+  if (tone === "danger") return "var(--color-red)";
+  if (tone === "warning") return "var(--color-yellow)";
+  if (tone === "info") return "var(--color-blue)";
+  return "var(--color-fg-4)";
+}
 
 export function Metricas() {
-  const { data: depData, isLoading: depLoading } = useDeputados({ itens: 500 });
-  const { data: senData, isLoading: senLoading } = useSenadores();
-  const { data: pecsData, isLoading: pecsLoading } = useProposicoes({
-    siglaTipo: "PEC",
-    itens: 50,
+  const hoje = startOfDay();
+  const anoAtual = hoje.getFullYear();
+
+  const depQ = useDeputados();
+  const senQ = useSenadores();
+  const pecsQ = useProposicoes({
+    tipo: "PEC",
+    itens: 24,
+    ordem: "DESC",
+    ordenarPor: "id",
+  });
+  const votacoesQ = useVotacoes({
+    dataInicio: isoDate(addDays(hoje, -90)),
+    dataFim: isoDate(hoje),
+    itens: 60,
   });
 
-  const deputados = (depData?.dados ?? []) as Array<{
-    siglaPartido: string;
-    siglaUf: string;
-  }>;
-  const senadores = (senData?.dados ?? []) as Array<{
-    siglaPartido: string;
-    siglaUf: string;
-  }>;
-  const pecs = pecsData?.dados ?? [];
+  const deputados = useMemo(() => depQ.data ?? [], [depQ.data]);
+  const senadores = useMemo(() => senQ.data ?? [], [senQ.data]);
+  const pecs = useMemo(() => pecsQ.data?.items ?? [], [pecsQ.data]);
+  const votacoes = useMemo(() => votacoesQ.data?.items ?? [], [votacoesQ.data]);
 
-  const partyData = useMemo(() => {
-    const count = deputados.reduce(
-      (acc, d) => {
-        acc[d.siglaPartido] = (acc[d.siglaPartido] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-    return Object.entries(count)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-  }, [deputados]);
+  const pecIds = pecs.filter((p) => p.casa === "camara" && !p.status).map((p) => p.id);
+  const pecDetails = useProposicaoDetalhes(pecIds);
+  const enrichedPecs = pecs.map((p) => {
+    const idx = pecIds.indexOf(p.id);
+    return { ...p, status: p.status ?? (idx >= 0 ? pecDetails[idx]?.data?.status : undefined) };
+  });
 
-  const ufData = useMemo(() => {
-    const count = deputados.reduce(
-      (acc, d) => {
-        acc[d.siglaUf] = (acc[d.siglaUf] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-    return Object.entries(count)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 15);
-  }, [deputados]);
+  const anos = useMemo(
+    () => Array.from({ length: 8 }, (_, i) => anoAtual - 7 + i),
+    [anoAtual]
+  );
+  const pecCounts = usePecCounts(anos);
 
-  const senPartyData = useMemo(() => {
-    const count = senadores.reduce(
-      (acc, s) => {
-        acc[s.siglaPartido] = (acc[s.siglaPartido] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-    return Object.entries(count)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-  }, [senadores]);
+  const meses = useMemo(
+    () =>
+      Array.from({ length: 8 }, (_, i) => {
+        const start = new Date(hoje.getFullYear(), hoje.getMonth() - 7 + i, 1);
+        const end = new Date(hoje.getFullYear(), hoje.getMonth() - 6 + i, 0);
+        return { inicio: isoDate(start), fim: isoDate(end), label: formatMonth(start) };
+      }),
+    [hoje]
+  );
+  const votosMes = useVotacoesMensais(meses);
 
-  const pecStatusData = useMemo(() => {
-    const count = (pecs as Array<{ statusProposicao?: { descricaoSituacao?: string } }>).reduce(
-      (acc, p) => {
-        const status = p.statusProposicao?.descricaoSituacao || "Sem status";
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-    return Object.entries(count)
+  const depPorPartido = useMemo(
+    () => distributionBy(deputados, (d) => d.partido, 10),
+    [deputados]
+  );
+  const senPorPartido = useMemo(
+    () => distributionBy(senadores, (s) => s.partido, 10),
+    [senadores]
+  );
+  const depPorUf = useMemo(() => distributionBy(deputados, (d) => d.uf).slice(0, 15), [deputados]);
+  const pecStatus = useMemo(() => {
+    const map = enrichedPecs.reduce<Record<string, number>>((acc, p) => {
+      const key = p.status?.trim() || "Sem situação";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [pecs]);
+  }, [enrichedPecs]);
 
-  if (depLoading || senLoading || pecsLoading) {
+  const votosResumo = useMemo(
+    () => [
+      { name: "Aprovadas", value: votacoes.filter((v) => v.aprovacao === 1).length },
+      { name: "Rejeitadas", value: votacoes.filter((v) => v.aprovacao === 0).length },
+      { name: "Sem registro", value: votacoes.filter((v) => v.aprovacao === null || v.aprovacao === undefined).length },
+    ],
+    [votacoes]
+  );
+
+  const partidosTotal = useMemo(
+    () => new Set([...deputados, ...senadores].map((p) => p.partido)).size,
+    [deputados, senadores]
+  );
+
+  const isError = depQ.isError || senQ.isError;
+  const trendPec = pecCounts.data.map((d) => ({ label: String(d.ano), total: d.total }));
+  const trendVotos = votosMes.data.map((d) => ({ label: d.label, total: d.total }));
+
+  if (isError) {
     return (
-      <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Skeleton className="h-80 w-full" />
-          <Skeleton className="h-80 w-full" />
-        </div>
-      </div>
+      <ErrorState
+        description="Não foi possível carregar os indicadores."
+        onRetry={() => {
+          depQ.refetch();
+          senQ.refetch();
+        }}
+      />
     );
   }
 
   return (
-    <div className="space-y-4 p-6">
-      <div>
-        <h2 className="font-serif text-xl font-medium tracking-tight text-fg">
-          Métricas do Congresso
-        </h2>
-        <p className="text-xs text-fg-4">
-          Análise distributiva e indicadores legislativos
-        </p>
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard label="Deputados" value={deputados.length} loading={depQ.isLoading} tone="info" />
+        <KpiCard label="Senadores" value={senadores.length} loading={senQ.isLoading} tone="accent" />
+        <KpiCard label="Partidos" value={partidosTotal} loading={depQ.isLoading} />
+        <KpiCard
+          label="PECs no período"
+          value={pecs.length}
+          loading={pecsQ.isLoading}
+          hint="amostra recente"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Deputados por Partido</CardTitle>
+            <CardTitle>Deputados por partido</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={partyData} layout="vertical">
-                <XAxis type="number" hide />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={50}
-                  tick={{ fill: "#A6A39C", fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "#1B1A17",
-                    border: "1px solid rgba(250,250,249,0.1)",
-                    borderRadius: "6px",
-                    color: "#FAFAF9",
-                    fontSize: "12px",
-                  }}
-                />
-                <Bar dataKey="value" fill="#D4A853" radius={[0, 3, 3, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {depQ.isLoading ? (
+              <LoadingRows rows={6} height={28} />
+            ) : (
+              <Donut items={depPorPartido} centerValue={deputados.length} centerLabel="deputados" />
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Senadores por Partido</CardTitle>
+            <CardTitle>Senadores por partido</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={senPartyData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {senPartyData.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "#1B1A17",
-                    border: "1px solid rgba(250,250,249,0.1)",
-                    borderRadius: "6px",
-                    color: "#FAFAF9",
-                    fontSize: "12px",
-                  }}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: "11px", color: "#A6A39C" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {senQ.isLoading ? (
+              <LoadingRows rows={6} height={28} />
+            ) : (
+              <Donut items={senPorPartido} centerValue={senadores.length} centerLabel="senadores" />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Deputados por estado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {depQ.isLoading ? (
+              <LoadingRows rows={8} height={26} />
+            ) : (
+              <HorizontalBars items={depPorUf} color={UF_COLOR} height={420} />
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Deputados por Estado</CardTitle>
+            <CardTitle>Situação das PECs</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={ufData}>
-                <XAxis
-                  dataKey="name"
-                  tick={{ fill: "#A6A39C", fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis hide />
-                <Tooltip
-                  contentStyle={{
-                    background: "#1B1A17",
-                    border: "1px solid rgba(250,250,249,0.1)",
-                    borderRadius: "6px",
-                    color: "#FAFAF9",
-                    fontSize: "12px",
-                  }}
-                />
-                <Bar dataKey="value" fill="#60A5FA" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {pecsQ.isLoading ? (
+              <LoadingRows rows={6} height={28} />
+            ) : (
+              <Donut items={pecStatus} colorFor={statusColor} centerValue={pecs.length} centerLabel="PECs" />
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Status das PECs</CardTitle>
+            <CardTitle>Resultado das votações · 90d</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pecStatusData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="value"
-                  label={({ name, percent }) =>
-                    `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`
-                  }
-                  labelLine={false}
-                >
-                  {pecStatusData.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "#1B1A17",
-                    border: "1px solid rgba(250,250,249,0.1)",
-                    borderRadius: "6px",
-                    color: "#FAFAF9",
-                    fontSize: "12px",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {votacoesQ.isLoading ? (
+              <LoadingRows rows={6} height={28} />
+            ) : (
+              <Donut
+                items={votosResumo}
+                centerValue={votacoes.length}
+                centerLabel="votações"
+                colorFor={(name) =>
+                  name === "Aprovadas"
+                    ? "var(--color-green)"
+                    : name === "Rejeitadas"
+                      ? "var(--color-red)"
+                      : "var(--color-fg-4)"
+                }
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>PECs por ano</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pecCounts.isLoading ? (
+              <LoadingRows rows={1} height={220} />
+            ) : (
+              <TrendArea data={trendPec} color="#d4a853" />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Votações por mês</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {votosMes.isLoading ? (
+              <LoadingRows rows={1} height={220} />
+            ) : (
+              <TrendArea data={trendVotos} color="#60a5fa" />
+            )}
           </CardContent>
         </Card>
       </div>

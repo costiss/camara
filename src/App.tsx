@@ -1,68 +1,81 @@
-import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Header } from "@/components/layout/Header";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppShell } from "@/components/layout/AppShell";
+import { useRoute } from "@/hooks/useUi";
 import { Dashboard } from "@/pages/Dashboard";
 import { Pecs } from "@/pages/Pecs";
+import { Agenda } from "@/pages/Agenda";
 import { Deputados } from "@/pages/Deputados";
 import { Senadores } from "@/pages/Senadores";
-import { Metricas } from "@/pages/Metricas";
 import { Atividades } from "@/pages/Atividades";
+import { Metricas } from "@/pages/Metricas";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: 3,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
       refetchOnWindowFocus: false,
+      staleTime: 60_000,
     },
   },
 });
 
-const pageConfig: Record<string, { title: string; subtitle: string }> = {
+interface PageMeta {
+  title: string;
+  subtitle: string;
+  render: () => React.ReactNode;
+}
+
+const PAGES: Record<string, PageMeta> = {
   dashboard: {
-    title: "Visão Geral",
-    subtitle: "Resumo do Congresso Nacional",
+    title: "Visão geral",
+    subtitle: "O Congresso Nacional em números, agora",
+    render: () => <Dashboard />,
   },
   pecs: {
     title: "PECs",
-    subtitle: "Propostas de Emenda à Constitución",
+    subtitle: "Propostas de Emenda à Constituição — Câmara e Senado",
+    render: () => <Pecs />,
+  },
+  agenda: {
+    title: "Agenda & votações",
+    subtitle: "Próximas sessões, pautas e votações recentes",
+    render: () => <Agenda />,
   },
   deputados: {
     title: "Deputados",
-    subtitle: "Câmara dos Deputados",
+    subtitle: "Câmara dos Deputados — bancada em exercício",
+    render: () => <Deputados />,
   },
   senadores: {
     title: "Senadores",
-    subtitle: "Senado Federal",
-  },
-  metricas: {
-    title: "Métricas",
-    subtitle: "Análise distributiva e indicadores",
+    subtitle: "Senado Federal — bancada em exercício",
+    render: () => <Senadores />,
   },
   atividades: {
     title: "Atividades",
-    subtitle: "Movimentações legislativas",
+    subtitle: "Movimentações legislativas recentes das duas casas",
+    render: () => <Atividades />,
+  },
+  metricas: {
+    title: "Métricas",
+    subtitle: "Distribuições, composição e séries históricas",
+    render: () => <Metricas />,
   },
 };
 
 function App() {
-  const [page, setPage] = useState("dashboard");
-  const config = pageConfig[page] || pageConfig.dashboard;
+  const route = useRoute();
+  const page = PAGES[route] ?? PAGES.dashboard;
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex h-screen overflow-hidden bg-bg">
-        <Sidebar active={page} onNavigate={setPage} />
-        <main className="ml-56 flex-1 overflow-y-auto">
-          <Header title={config.title} subtitle={config.subtitle} />
-          {page === "dashboard" && <Dashboard />}
-          {page === "pecs" && <Pecs />}
-          {page === "deputados" && <Deputados />}
-          {page === "senadores" && <Senadores />}
-          {page === "metricas" && <Metricas />}
-          {page === "atividades" && <Atividades />}
-        </main>
-      </div>
+      <TooltipProvider delayDuration={200}>
+        <AppShell title={page.title} subtitle={page.subtitle}>
+          {page.render()}
+        </AppShell>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

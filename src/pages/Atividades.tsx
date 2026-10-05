@@ -1,151 +1,208 @@
-import { useProposicoes } from "@/hooks/useProposicoes";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useMemo, useState } from "react";
+import { Activity, FileText, Gavel, CalendarDays } from "lucide-react";
 import {
-  ScrollText,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
-  FileText,
-  Calendar,
-} from "lucide-react";
+  useEventos,
+  useProposicaoDetalhes,
+  useProposicoes,
+  useVotacoes,
+} from "@/hooks/useCamara";
+import { useSenadoVotacoes } from "@/hooks/useSenado";
+import {
+  EmptyState,
+  ErrorState,
+  EventoAgendaCard,
+  KpiCard,
+  LoadingRows,
+  ProposicaoRow,
+  VotacaoRow,
+} from "@/components/shared";
+import { ProposicaoDetail } from "@/components/detail/ProposicaoDetail";
+import { VotacaoDetail } from "@/components/detail/VotacaoDetail";
+import { addDays, isoDate, startOfDay } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { Evento, Proposicao, Votacao } from "@/lib/types";
+
+type Tipo = "tudo" | "votacoes" | "proposicoes" | "sessoes";
+
+type FeedItem =
+  | { kind: "votacao"; date: string; votacao: Votacao }
+  | { kind: "proposicao"; date: string; proposicao: Proposicao }
+  | { kind: "evento"; date: string; evento: Evento };
 
 export function Atividades() {
-  const { data, isLoading } = useProposicoes({
-    siglaTipo: "PEC",
+  const hoje = startOfDay();
+  const [tipo, setTipo] = useState<Tipo>("tudo");
+  const [selectedPec, setSelectedPec] = useState<Proposicao | null>(null);
+  const [selectedVotacao, setSelectedVotacao] = useState<Votacao | null>(null);
+
+  const votacoesQ = useVotacoes({
+    dataInicio: isoDate(addDays(hoje, -90)),
+    dataFim: isoDate(hoje),
+    itens: 18,
+  });
+  const senadoQ = useSenadoVotacoes();
+  const proposicoesQ = useProposicoes({
+    itens: 15,
+    ordem: "DESC",
+    ordenarPor: "id",
+  });
+  const eventosQ = useEventos({
+    dataInicio: isoDate(addDays(hoje, -14)),
+    dataFim: isoDate(hoje),
     itens: 30,
   });
 
-  const pecs = (data?.dados ?? []) as Array<{
-    id: number;
-    numero: number;
-    ano: number;
-    ementa: string;
-    statusProposicao?: {
-      descricaoSituacao: string;
-      siglaOrgao: string;
-      dataHora: string;
-      despacho: string;
-      descricaoTramitacao: string;
-    };
-  }>;
+  const votacoes = useMemo(() => votacoesQ.data?.items ?? [], [votacoesQ.data]);
+  const proposicoes = useMemo(
+    () => proposicoesQ.data?.items ?? [],
+    [proposicoesQ.data]
+  );
 
-  const atividades = pecs
-    .filter((p) => p.statusProposicao)
-    .map((p) => ({
-      id: p.id,
-      tipo: "PEC",
-      numero: p.numero,
-      ano: p.ano,
-      ementa: p.ementa,
-      status: p.statusProposicao!.descricaoSituacao,
-      orgao: p.statusProposicao!.siglaOrgao,
-      data: p.statusProposicao!.dataHora,
-      despacho: p.statusProposicao!.despacho,
-      tramitacao: p.statusProposicao!.descricaoTramitacao,
-    }))
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  const proposalIds = useMemo(
+    () =>
+      proposicoes
+        .filter((p) => p.casa === "camara" && !p.status)
+        .map((p) => p.id),
+    [proposicoes]
+  );
+  const details = useProposicaoDetalhes(proposalIds);
+  const statusById = useMemo(() => {
+    const map = new Map<string, string | undefined>();
+    proposalIds.forEach((id, i) => map.set(id, details[i]?.data?.status));
+    return map;
+  }, [proposalIds, details]);
+
+  const feed = useMemo<FeedItem[]>(() => {
+    const votosCamara: FeedItem[] = votacoes.map((v) => ({
+      kind: "votacao",
+      date: v.dataHora ?? v.data,
+      votacao: v,
+    }));
+    const votosSenado: FeedItem[] = (senadoQ.data ?? [])
+      .slice(0, 18)
+      .map((v) => ({ kind: "votacao", date: v.data, votacao: v }));
+    const props: FeedItem[] = proposicoes.map((p) => ({
+      kind: "proposicao",
+      date: p.apresentacao ?? p.situacaoData ?? "",
+      proposicao: { ...p, status: p.status ?? statusById.get(p.id) },
+    }));
+    const eventos: FeedItem[] = (eventosQ.data ?? [])
+      .filter((e) => new Date(e.inicio).getTime() <= Date.now())
+      .map((e) => ({ kind: "evento", date: e.inicio, evento: e }));
+
+    const filtro: FeedItem[] =
+      tipo === "tudo"
+        ? [...votosCamara, ...votosSenado, ...props, ...eventos]
+        : tipo === "votacoes"
+          ? [...votosCamara, ...votosSenado]
+          : tipo === "proposicoes"
+            ? props
+            : eventos;
+
+    return filtro.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [votacoes, senadoQ.data, proposicoes, statusById, eventosQ.data, tipo]);
+
+  const isLoading =
+    votacoesQ.isLoading || proposicoesQ.isLoading || eventosQ.isLoading;
+  const isError = votacoesQ.isError && proposicoesQ.isError;
 
   return (
-    <div className="space-y-4 p-6">
-      <div>
-        <h2 className="font-serif text-xl font-medium tracking-tight text-fg">
-          Atividades Legislativas
-        </h2>
-        <p className="text-xs text-fg-4">
-          Últimas movimentações e tramitações das PECs
-        </p>
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard
+          label="Votações · 90d"
+          value={votacoesQ.data?.total ?? votacoes.length}
+          icon={Gavel}
+          tone="success"
+          loading={votacoesQ.isLoading}
+        />
+        <KpiCard
+          label="Senado · votos"
+          value={(senadoQ.data ?? []).length}
+          icon={Gavel}
+          tone="accent"
+          loading={senadoQ.isLoading}
+        />
+        <KpiCard
+          label="Proposições"
+          value={proposicoesQ.data?.total ?? proposicoes.length}
+          icon={FileText}
+          tone="info"
+          loading={proposicoesQ.isLoading}
+        />
+        <KpiCard
+          label="Sessões · 14d"
+          value={(eventosQ.data ?? []).length}
+          icon={CalendarDays}
+          loading={eventosQ.isLoading}
+        />
       </div>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full" />
-          ))}
-        </div>
+      <div className="seg">
+        {(
+          [
+            { id: "tudo", label: "Tudo" },
+            { id: "votacoes", label: "Votações" },
+            { id: "proposicoes", label: "Proposições" },
+            { id: "sessoes", label: "Sessões" },
+          ] as { id: Tipo; label: string }[]
+        ).map((opt) => (
+          <button key={opt.id} data-active={tipo === opt.id} onClick={() => setTipo(opt.id)}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {isError ? (
+        <ErrorState
+          onRetry={() => {
+            votacoesQ.refetch();
+            proposicoesQ.refetch();
+            eventosQ.refetch();
+          }}
+        />
+      ) : isLoading ? (
+        <LoadingRows rows={8} height={96} />
+      ) : feed.length === 0 ? (
+        <EmptyState
+          icon={Activity}
+          title="Nenhuma atividade no período"
+          description="Não há movimentações recentes para o filtro selecionado."
+        />
       ) : (
-        <div className="space-y-2">
-          {atividades.map((atv) => (
-            <Card key={`${atv.id}-${atv.data}`} className="transition-all hover:border-line-2">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-panel-3">
-                    <FileText className="h-5 w-5 text-fg-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="tn text-sm font-semibold text-fg">
-                        PEC {atv.numero}/{atv.ano}
-                      </span>
-                      <StatusBadge status={atv.status} />
-                      <Badge variant="default" className="text-[10px]">
-                        {atv.orgao}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-fg-3">
-                      {atv.ementa}
-                    </p>
-                    {atv.despacho && (
-                      <p className="mt-2 line-clamp-2 text-[11px] italic text-fg-5">
-                        "{atv.despacho}"
-                      </p>
-                    )}
-                    <div className="mt-2 flex items-center gap-3 text-[10px] text-fg-5">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(atv.data).toLocaleDateString("pt-BR")} às{" "}
-                        {new Date(atv.data).toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <ScrollText className="h-3 w-3" />
-                        {atv.tramitacao}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className={cn("space-y-2")}>
+          {feed.slice(0, 40).map((item, i) =>
+            item.kind === "votacao" ? (
+              <VotacaoRow
+                key={`v-${item.votacao.id}-${i}`}
+                v={item.votacao}
+                onOpen={setSelectedVotacao}
+              />
+            ) : item.kind === "proposicao" ? (
+              <ProposicaoRow
+                key={`p-${item.proposicao.id}-${i}`}
+                p={item.proposicao}
+                onOpen={setSelectedPec}
+              />
+            ) : (
+              <EventoAgendaCard key={`e-${item.evento.id}`} e={item.evento} />
+            )
+          )}
         </div>
       )}
 
-      {atividades.length === 0 && !isLoading && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <ScrollText className="mb-3 h-8 w-8 text-fg-5" />
-          <p className="text-sm text-fg-4">Nenhuma atividade encontrada</p>
-        </div>
-      )}
+      <ProposicaoDetail
+        proposicao={selectedPec}
+        open={!!selectedPec}
+        onOpenChange={(o) => !o && setSelectedPec(null)}
+      />
+      <VotacaoDetail
+        votacao={selectedVotacao}
+        open={!!selectedVotacao}
+        onOpenChange={(o) => !o && setSelectedVotacao(null)}
+      />
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
-
-  const s = status.toLowerCase();
-  let variant: "default" | "success" | "danger" | "warning" | "info" = "default";
-  let icon = <Clock className="h-3 w-3" />;
-
-  if (s.includes("aprovad") || s.includes("promulgad")) {
-    variant = "success";
-    icon = <CheckCircle2 className="h-3 w-3" />;
-  } else if (s.includes("rejeitad") || s.includes("arquivad") || s.includes("encerrad")) {
-    variant = "danger";
-    icon = <XCircle className="h-3 w-3" />;
-  } else if (s.includes("tramita") || s.includes("aguardando")) {
-    variant = "warning";
-    icon = <AlertCircle className="h-3 w-3" />;
-  }
-
-  return (
-    <Badge variant={variant} className="gap-1 text-[10px]">
-      {icon}
-      {status.length > 25 ? status.slice(0, 25) + "…" : status}
-    </Badge>
   );
 }
