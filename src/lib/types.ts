@@ -35,6 +35,18 @@ export interface Parlamentar {
   bloco?: string;
 }
 
+/** Where a proposal stands today and who is behind it, for the plain-language explainer. */
+export interface ContextoProposta {
+  situacao?: string;
+  dataSituacao?: string;
+  /** The law it became, e.g. "Lei Complementar 237/2026". */
+  norma?: string;
+  vetos?: "parcial" | "total";
+  temas: string[];
+  autores: string[];
+  textoIntegral?: string;
+}
+
 export interface Proposicao {
   id: string;
   casa: Casa;

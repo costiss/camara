@@ -113,7 +113,7 @@ export function AgendaView() {
         ) : (
           dias.map(([dia, eventos]) => (
             <div key={dia} className="mb-2">
-              <h2 className="sticky top-0 z-[1] bg-panel/95 py-2 text-[12px] font-medium capitalize text-fg-3 backdrop-blur">
+              <h2 className="sticky top-0 z-[1] bg-panel/95 py-2 text-[12px] font-medium text-fg-3 backdrop-blur first-letter:uppercase">
                 {diaFmt.format(new Date(`${dia}T12:00:00`))}
               </h2>
               {eventos.map((e, i) => (

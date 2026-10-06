@@ -6,7 +6,7 @@
  * `asArray` smooths that over. Media URLs sometimes come back as
  * `http://` and are upgraded to avoid mixed-content blocking.
  */
-import type { Parlamentar, Votacao, VotoParlamentar } from "../types";
+import type { ContextoProposta, Parlamentar, Votacao, VotoParlamentar } from "../types";
 import { CADEIRAS, VotoClassifier, VoteTally } from "../votos";
 import { SENADO_BASE } from "./config";
 import { getJson } from "./http";
@@ -263,3 +263,31 @@ export async function getSenadoVotacoes(intervalo?: { ini: string; fim: string }
     .sort((a, b) => b.data.localeCompare(a.data) || b.id.localeCompare(a.id, undefined, { numeric: true }));
 }
 
+interface RawProcessoResumo {
+  autoria?: string;
+  situacaoAtual?: string;
+  dataSituacaoAtual?: string;
+  normaGerada?: string;
+}
+
+function fraseNormal(s?: string): string | undefined {
+  if (!s) return undefined;
+  const t = s.trim();
+  return t === t.toUpperCase() ? t.charAt(0) + t.slice(1).toLowerCase() : t;
+}
+
+/** Current status, author and resulting law of a Senate matter. */
+export async function getContextoMateria(codigoMateria: string): Promise<ContextoProposta> {
+  const data = await getJson<RawProcessoResumo[]>(`${BASE}/processo?codigoMateria=${encodeURIComponent(codigoMateria)}`);
+  const p = asArray(data)[0] ?? {};
+  const situacao = fraseNormal(p.situacaoAtual);
+  const norma = /^(.+?)\s+n[º°]\s*([\d.]+)/i.exec(p.normaGerada ?? "");
+  return {
+    situacao,
+    dataSituacao: p.dataSituacaoAtual,
+    norma: norma ? `${norma[1]} ${norma[2]}/${(p.normaGerada ?? "").match(/(\d{4})\s*$/)?.[1] ?? ""}`.replace(/\/$/, "") : undefined,
+    vetos: /veto total/i.test(situacao ?? "") ? "total" : /veto parcial/i.test(situacao ?? "") ? "parcial" : undefined,
+    temas: [],
+    autores: p.autoria ? [p.autoria] : [],
+  };
+}

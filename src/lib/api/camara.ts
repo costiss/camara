@@ -4,6 +4,7 @@
  */
 import type {
   Autor,
+  ContextoProposta,
   Evento,
   OrientacaoBancada,
   Parlamentar,
@@ -514,6 +515,53 @@ export async function countVotacoes(
 }
 
 /** Recent propositions authored by a deputy. */
+interface RawProposicaoDetalhe {
+  keywords?: string | null;
+  urlInteiroTeor?: string | null;
+  statusProposicao?: {
+    dataHora?: string;
+    descricaoSituacao?: string | null;
+    descricaoTramitacao?: string | null;
+    despacho?: string | null;
+  } | null;
+}
+
+const TEMAS_GENERICOS = /^(altera[çc][ãa]o|lei federal|lei|cria[çc][ãa]o|normas?|crit[ée]rios?|proposi[çc][ãa]o legislativa|projeto de lei|inaplica[çc][ãa]o|concess[ãa]o|proibi[çc][ãa]o|prorroga[çc][ãa]o|prazo|vig[êe]ncia|\d{4})$/i;
+
+export function limparTemas(raw?: string | null): string[] {
+  const vistos = new Set<string>();
+  const out: string[] = [];
+  for (const t of (raw ?? "").replace(/\.$/, "").split(/[,;]/)) {
+    const tema = t.trim();
+    const chave = tema.toLowerCase();
+    if (!tema || TEMAS_GENERICOS.test(tema) || vistos.has(chave)) continue;
+    vistos.add(chave);
+    out.push(tema);
+  }
+  return out.slice(0, 6);
+}
+
+/** Current status, themes, authors and full text of a Câmara proposal. */
+export async function getContextoProposicao(id: string): Promise<ContextoProposta> {
+  const [detalhe, autores] = await Promise.all([
+    getApi<{ dados: RawProposicaoDetalhe }>(`${BASE}/proposicoes/${id}`),
+    getApi<{ dados: RawAutor[] }>(`${BASE}/proposicoes/${id}/autores`).catch(() => ({ dados: [] as RawAutor[] })),
+  ]);
+  const d = detalhe.dados ?? {};
+  const st = d.statusProposicao ?? {};
+  const texto = `${st.descricaoTramitacao ?? ""} ${st.despacho ?? ""}`;
+  const norma = /Transformad[oa] n[oa] (Lei(?: Complementar)?|Emenda Constitucional|Decreto Legislativo|Resolu[çc][ãa]o)\s+([\d.]+\/\d{4})/i.exec(st.despacho ?? "");
+  return {
+    situacao: st.descricaoSituacao ?? undefined,
+    dataSituacao: st.dataHora,
+    norma: norma ? `${norma[1]} ${norma[2]}` : undefined,
+    vetos: /veto(?:\s+|-)?total|vetad[oa] totalmente/i.test(texto) ? "total" : /veto parcial|vetad[oa] parcialmente/i.test(texto) ? "parcial" : undefined,
+    temas: limparTemas(d.keywords),
+    autores: (autores.dados ?? []).map((a) => a.nome).filter(Boolean),
+    textoIntegral: d.urlInteiroTeor ?? undefined,
+  };
+}
+
 export async function getProposicoesPorAutor(
   id: number | string,
   itens = 12

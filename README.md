@@ -24,6 +24,11 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
   on top goes back to the list and steps to the next newer/older vote. The
   left column is the menu (steps of this vote, latest votes); the map and the
   hemicycle sit in a small corner card that expands into a dialog.
+- **Para leigos** (on the vote and inspect pages, collapsed by default, `leigos=1`)
+  — where the proposal stands today (e.g. "virou a Lei Complementar 237/2026,
+  com vetos parciais", from the Câmara/Senado status), what voting Sim or Não
+  meant in this step, why that many votes were needed, what happens next,
+  themes, authors, the full text and a glossary of the terms on the page.
 - **Inspecionar** (`#/inspecionar/<id>`) — everything about one vote: what was
   voted, every vote category, quorum, each leader's orientation, a party or
   state table (with how faithfully each party followed its orientation) and

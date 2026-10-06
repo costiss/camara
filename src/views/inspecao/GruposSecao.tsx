@@ -45,7 +45,47 @@ export function GruposSecao({ inspecao, onPartido, onUf }: {
       <p className="-mt-1 mb-2 text-[12px] text-fg-4">
         Clique num {porPartido ? "partido" : "estado"} para ver o voto de cada parlamentar.
       </p>
-      <div className="quiet-scroll -mx-1 overflow-x-auto px-1">
+      <ol className="lista-partidos md:hidden">
+        {linhas.map((l) => {
+          const c = l.contagem;
+          const outros = c.obstrucao + c.presidente + c.presente + c.secreto;
+          const detalhes = [
+            `${c.sim} Sim`,
+            `${c.nao} Não`,
+            c.abstencao ? `${c.abstencao} abst.` : null,
+            outros ? `${outros} ${outros === 1 ? "outro" : "outros"}` : null,
+            c.ausente ? `${c.ausente} ausentes` : null,
+          ].filter(Boolean);
+          return (
+            <li key={l.chave} className="py-2.5">
+              <div className="flex items-baseline gap-2">
+                <button
+                  type="button"
+                  onClick={() => (porPartido ? onPartido(l.chave) : onUf(l.chave))}
+                  className="min-w-0 truncate text-[14px] font-medium underline-offset-4 hover:underline"
+                  style={{ color: porPartido ? partyColor(l.chave) : undefined }}
+                >
+                  {l.chave}
+                </button>
+                <span className="tn text-[12px] text-fg-4">{l.cadeiras}</span>
+                <span className="tn ml-auto text-[14px] font-medium">{pct(l.pctSim)} Sim</span>
+              </div>
+              <Barra l={l} />
+              <p className="mt-1.5 text-[12px] leading-relaxed text-fg-3">
+                {detalhes.join(" · ")}
+                {orientacao && l.orientacao && (
+                  <>
+                    {" · pediu "}
+                    <span style={{ color: l.orientacao.categoria ? CATEGORIA_COR[l.orientacao.categoria] : undefined }}>{l.orientacao.orientacao}</span>
+                  </>
+                )}
+                {orientacao && l.fidelidade !== null && ` · ${pct(l.fidelidade)} seguiram`}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="quiet-scroll -mx-1 hidden overflow-x-auto px-1 md:block">
         <table className="lista-tabela w-full min-w-[640px]">
           <thead>
             <tr>

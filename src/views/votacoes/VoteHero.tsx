@@ -1,5 +1,5 @@
 import { ExternalLink } from "lucide-react";
-import { CodigoProposta, ExplicaTipo, TextoOficial, Veredito } from "@/components/hud/proposta";
+import { CodigoProposta, TextoOficial, Veredito } from "@/components/hud/proposta";
 import { inspecaoHref } from "@/hooks/useUi";
 import { formatNumber, formatQuando } from "@/lib/format";
 import { lerVotacao } from "@/lib/linguagem";
@@ -62,7 +62,6 @@ export function VoteHero({ votacao, tally, onOpenRollCall }: {
 
       <h1 id="vote-title" className={cn("mt-4", tamanhoTitulo(leitura.titulo))}>{leitura.titulo}</h1>
       <CodigoProposta leitura={leitura} className="mt-2.5 block text-[13px] text-fg-3" />
-      {leitura.tipo && <ExplicaTipo tipo={leitura.tipo} className="mt-1.5" />}
 
       <div className="mt-5 grid gap-5 @xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] @xl:gap-7">
         <div>

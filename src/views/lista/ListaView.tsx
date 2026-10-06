@@ -44,7 +44,7 @@ export function ListaView() {
               </button>
             ))}
           </div>
-          <div className="tabs-mini quiet-scroll max-w-full overflow-x-auto [&>button]:shrink-0 [&>button]:whitespace-nowrap" role="group" aria-label="Período">
+          <div className="tabs-mini max-w-full flex-wrap [&>button]:whitespace-nowrap" role="group" aria-label="Período">
             {opcoes.map((p) => (
               <button key={p.valor} type="button" aria-pressed={feed.periodo.valor === p.valor} onClick={() => definir({ periodo: p.valor })}>
                 {p.label}

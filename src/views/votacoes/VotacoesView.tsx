@@ -8,6 +8,7 @@ import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
 import { router, useQueryParam, useRoute } from "@/hooks/useUi";
 import { DeliberacaoSteps } from "./DeliberacaoSteps";
+import { ParaLeigos } from "./ParaLeigos";
 import { PartyBreakdown } from "./PartyBreakdown";
 import { RollCallSheet } from "./RollCallSheet";
 import { VoteHero } from "./VoteHero";
@@ -67,6 +68,7 @@ export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
       ) : (
         <>
           <VoteHero votacao={votacao} tally={tally} onOpenRollCall={() => setRollCall(true)} />
+          <ParaLeigos votacao={votacao} />
           <PartyBreakdown votacao={votacao} assentos={assentos} orientacoes={orientacoes} activeUf={activeUf} onClearUf={() => selectUf(null)} />
         </>
       )}

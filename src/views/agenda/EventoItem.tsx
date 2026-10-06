@@ -51,7 +51,7 @@ export function EventoItem({ e }: { e: Evento }) {
       <div className="grid grid-cols-[52px_minmax(0,1fr)] gap-3">
         <span className="tn pt-0.5 text-[13px] text-fg-2">{formatTime(e.inicio)}</span>
         <div className="min-w-0">
-          <p className={cn("text-[13px] font-medium leading-snug", cancelado && "text-fg-4 line-through")}>{e.titulo}</p>
+          <p className={cn("text-[13px] font-medium leading-snug [overflow-wrap:anywhere]", cancelado && "text-fg-4 line-through")}>{e.titulo}</p>
           <p className="mt-0.5 text-[12px] text-fg-3">
             {[e.tipo, e.orgao, e.local].filter(Boolean).join(" · ")}
           </p>

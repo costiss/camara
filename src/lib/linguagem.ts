@@ -238,7 +238,19 @@ export function tituloPopular(ementa?: string | null): string {
 
 /* ------------------------------ vote steps ------------------------------ */
 
+export type TipoEtapa =
+  | "principal"
+  | "urgencia"
+  | "requerimento"
+  | "preliminar"
+  | "redacao"
+  | "ajuste"
+  | "senado"
+  | "destaque"
+  | "emenda";
+
 export interface Etapa {
+  tipo: TipoEtapa;
   rotulo: string;
   explica: string;
   /** Votes on the merit (main text, amendments, highlights) versus procedure. */
@@ -246,19 +258,20 @@ export interface Etapa {
 }
 
 const ETAPAS: [RegExp, Etapa][] = [
-  [/reda[çc][ãa]o final/i, { rotulo: "Redação final", explica: "Confirma a redação final do texto já aprovado. Só corrige a forma, não muda o conteúdo.", merito: false }],
-  [/urg[êe]ncia|regime de tramita[çc][ãa]o/i, { rotulo: "Urgência", explica: "Pedido para acelerar a tramitação. Não decide se a proposta vira lei.", merito: false }],
-  [/aprecia[çc][ãa]o preliminar|pressupostos|admissibilidade/i, { rotulo: "Análise preliminar", explica: "Verifica se a proposta pode seguir (constitucionalidade, urgência ou impacto nas contas), sem decidir o conteúdo.", merito: false }],
-  [/^(?:aprovad|rejeitad)[oa]s?,?\s*(?:por unanimidade,\s*)?o\s+requerimento|^rejeitado o requerimento|requerimento/i, { rotulo: "Requerimento", explica: "Pedido sobre o andamento da votação, como adiar ou retirar de pauta. Não decide o conteúdo.", merito: false }],
-  [/ressalvad/i, { rotulo: "Texto principal", explica: "Votação do texto-base. Trechos destacados são votados depois, em separado.", merito: true }],
-  [/emenda de reda[çc][ãa]o/i, { rotulo: "Ajuste de redação", explica: "Corrige a redação de um trecho, sem mudar o conteúdo.", merito: false }],
-  [/^(?:aprovad|rejeitad)[oa]\s+(?:o|a)\s+(?:subemenda\s+)?substitutiv|votação nominal do substitutivo/i, { rotulo: "Texto principal", explica: "Votação do texto-base na versão do relator, que substitui o original.", merito: true }],
-  [/emendas? do senado/i, { rotulo: "Mudanças do Senado", explica: "Alterações feitas pelo Senado. A Câmara decide se aceita ou mantém o próprio texto.", merito: true }],
-  [/^mantid[oa]|^suprimid[oa]|destaque|\bart\.\s*\d+.*destacad/i, { rotulo: "Destaque", explica: "Votação em separado de um trecho do texto principal.", merito: true }],
-  [/emenda/i, { rotulo: "Emenda", explica: "Proposta de mudança em um trecho do texto.", merito: true }],
+  [/reda[çc][ãa]o final/i, { tipo: "redacao", rotulo: "Redação final", explica: "Confirma a redação final do texto já aprovado. Só corrige a forma, não muda o conteúdo.", merito: false }],
+  [/urg[êe]ncia|regime de tramita[çc][ãa]o/i, { tipo: "urgencia", rotulo: "Urgência", explica: "Pedido para acelerar a tramitação. Não decide se a proposta vira lei.", merito: false }],
+  [/aprecia[çc][ãa]o preliminar|pressupostos|admissibilidade/i, { tipo: "preliminar", rotulo: "Análise preliminar", explica: "Verifica se a proposta pode seguir (constitucionalidade, urgência ou impacto nas contas), sem decidir o conteúdo.", merito: false }],
+  [/^(?:aprovad|rejeitad)[oa]s?,?\s*(?:por unanimidade,\s*)?o\s+requerimento|^rejeitado o requerimento|requerimento/i, { tipo: "requerimento", rotulo: "Requerimento", explica: "Pedido sobre o andamento da votação, como adiar ou retirar de pauta. Não decide o conteúdo.", merito: false }],
+  [/ressalvad/i, { tipo: "principal", rotulo: "Texto principal", explica: "Votação do texto-base. Trechos destacados são votados depois, em separado.", merito: true }],
+  [/emenda de reda[çc][ãa]o/i, { tipo: "ajuste", rotulo: "Ajuste de redação", explica: "Corrige a redação de um trecho, sem mudar o conteúdo.", merito: false }],
+  [/^(?:aprovad|rejeitad)[oa]\s+(?:o|a)\s+(?:subemenda\s+)?substitutiv|votação nominal do substitutivo/i, { tipo: "principal", rotulo: "Texto principal", explica: "Votação do texto-base na versão do relator, que substitui o original.", merito: true }],
+  [/emendas? do senado/i, { tipo: "senado", rotulo: "Mudanças do Senado", explica: "Alterações feitas pelo Senado. A Câmara decide se aceita ou mantém o próprio texto.", merito: true }],
+  [/^mantid[oa]|^suprimid[oa]|destaque|\bart\.\s*\d+.*destacad/i, { tipo: "destaque", rotulo: "Destaque", explica: "Votação em separado de um trecho do texto principal.", merito: true }],
+  [/emenda/i, { tipo: "emenda", rotulo: "Emenda", explica: "Proposta de mudança em um trecho do texto.", merito: true }],
 ];
 
 const TEXTO_PRINCIPAL: Etapa = {
+  tipo: "principal",
   rotulo: "Texto principal",
   explica: "Votação do conteúdo da proposta como um todo.",
   merito: true,

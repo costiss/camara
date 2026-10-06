@@ -36,3 +36,24 @@ export function useSeats(assentos: VotoParlamentar[], activeUf?: string | null):
     [assentos, activeUf]
   );
 }
+
+export interface ResumoUf {
+  uf: string;
+  sim: number;
+  nao: number;
+  pct: number | null;
+}
+
+/** Sim/Não per state, alphabetical, for a readable list where the map is too small. */
+export function useResumoUf(assentos: VotoParlamentar[]): ResumoUf[] {
+  return useMemo(
+    () =>
+      agruparVotos(assentos, (v) => v.uf)
+        .map((g) => {
+          const { sim, nao } = g.tally.counts;
+          return { uf: g.chave, sim, nao, pct: sim + nao ? Math.round((sim / (sim + nao)) * 100) : null };
+        })
+        .sort((a, b) => a.uf.localeCompare(b.uf)),
+    [assentos]
+  );
+}

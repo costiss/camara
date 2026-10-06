@@ -97,7 +97,7 @@ export function HudHeader({ view, onSearch }: { view: View; onSearch: () => void
       <div className="flex items-center justify-between lg:hidden">
         <StatusLine />
       </div>
-      <ViewSwitch view={view} className="w-full lg:w-auto [&>a]:flex-1 [&>a]:px-2.5 lg:[&>a]:flex-none lg:[&>a]:px-3.5" />
+      <ViewSwitch view={view} className="w-full lg:w-auto [&>a]:flex-1 [&>a]:px-1.5 max-[380px]:[&>a]:px-1 max-[380px]:[&>a]:text-[12px] sm:[&>a]:px-2.5 lg:[&>a]:flex-none lg:[&>a]:px-3.5" />
       <button
         type="button"
         onClick={onSearch}

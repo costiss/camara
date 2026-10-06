@@ -9,6 +9,7 @@ import { InspecaoVotacao } from "@/lib/inspecao";
 import type { OrientacaoBancada } from "@/lib/types";
 import { CATEGORIA_COR } from "@/lib/votos";
 import { DeliberacaoSteps } from "../votacoes/DeliberacaoSteps";
+import { ParaLeigos } from "../votacoes/ParaLeigos";
 import { GruposSecao } from "./GruposSecao";
 import { InspecaoResumo } from "./InspecaoResumo";
 import { VotosSecao } from "./VotosSecao";
@@ -84,6 +85,7 @@ export function InspecaoView({ votacaoId }: { votacaoId?: string }) {
         {pronto && votacao ? (
           <>
             <InspecaoResumo votacao={votacao} tally={tally} inspecao={inspecao} onVoto={(c) => router.patch({ voto: c, secao: "votos" })} />
+            <ParaLeigos votacao={votacao} />
             {deliberacao && <DeliberacaoSteps deliberacao={deliberacao} currentId={votacaoId} destino="inspecao" />}
           </>
         ) : (

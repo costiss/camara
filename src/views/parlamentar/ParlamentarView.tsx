@@ -57,7 +57,7 @@ export function ParlamentarView({ id }: { id: string }) {
 
       <div className="hud-col">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="tabs-mini quiet-scroll max-w-full overflow-x-auto [&>button]:shrink-0 [&>button]:whitespace-nowrap" role="group" aria-label="Período">
+          <div className="tabs-mini max-w-full flex-wrap [&>button]:whitespace-nowrap" role="group" aria-label="Período">
             {opcoes.map((p) => (
               <button key={p.valor} type="button" aria-pressed={periodo === p.valor} onClick={() => setPeriodo(p.valor)}>
                 {p.label}
