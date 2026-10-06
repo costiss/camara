@@ -541,6 +541,26 @@ export function limparTemas(raw?: string | null): string[] {
   return out.slice(0, 6);
 }
 
+export type SituacaoProposicao = Pick<ContextoProposta, "situacao" | "dataSituacao" | "norma" | "vetos">;
+
+function situacaoDoDetalhe(d: RawProposicaoDetalhe): SituacaoProposicao {
+  const st = d.statusProposicao ?? {};
+  const texto = `${st.descricaoTramitacao ?? ""} ${st.despacho ?? ""}`;
+  const norma = /Transformad[oa] n[oa] (Lei(?: Complementar)?|Emenda Constitucional|Decreto Legislativo|Resolu[çc][ãa]o)\s+([\d.]+\/\d{4})/i.exec(st.despacho ?? "");
+  return {
+    situacao: st.descricaoSituacao ?? st.descricaoTramitacao ?? undefined,
+    dataSituacao: st.dataHora,
+    norma: norma ? `${norma[1]} ${norma[2]}` : undefined,
+    vetos: /veto(?:\s+|-)?total|vetad[oa] totalmente/i.test(texto) ? "total" : /veto parcial|vetad[oa] parcialmente/i.test(texto) ? "parcial" : undefined,
+  };
+}
+
+/** Current status of a Câmara proposal (one request). */
+export async function getSituacaoProposicao(id: string): Promise<SituacaoProposicao> {
+  const { dados } = await getApi<{ dados: RawProposicaoDetalhe }>(`${BASE}/proposicoes/${id}`);
+  return situacaoDoDetalhe(dados ?? {});
+}
+
 /** Current status, themes, authors and full text of a Câmara proposal. */
 export async function getContextoProposicao(id: string): Promise<ContextoProposta> {
   const [detalhe, autores] = await Promise.all([
@@ -548,18 +568,23 @@ export async function getContextoProposicao(id: string): Promise<ContextoPropost
     getApi<{ dados: RawAutor[] }>(`${BASE}/proposicoes/${id}/autores`).catch(() => ({ dados: [] as RawAutor[] })),
   ]);
   const d = detalhe.dados ?? {};
-  const st = d.statusProposicao ?? {};
-  const texto = `${st.descricaoTramitacao ?? ""} ${st.despacho ?? ""}`;
-  const norma = /Transformad[oa] n[oa] (Lei(?: Complementar)?|Emenda Constitucional|Decreto Legislativo|Resolu[çc][ãa]o)\s+([\d.]+\/\d{4})/i.exec(st.despacho ?? "");
   return {
-    situacao: st.descricaoSituacao ?? undefined,
-    dataSituacao: st.dataHora,
-    norma: norma ? `${norma[1]} ${norma[2]}` : undefined,
-    vetos: /veto(?:\s+|-)?total|vetad[oa] totalmente/i.test(texto) ? "total" : /veto parcial|vetad[oa] parcialmente/i.test(texto) ? "parcial" : undefined,
+    ...situacaoDoDetalhe(d),
     temas: limparTemas(d.keywords),
     autores: (autores.dados ?? []).map((a) => a.nome).filter(Boolean),
     textoIntegral: d.urlInteiroTeor ?? undefined,
   };
+}
+
+/** Every bill (PEC, PLP, PL, PDL) a deputy authored or co-authored, newest first. */
+export async function getAutoriaDeputado(id: string): Promise<Proposicao[]> {
+  const url = new URL(`${BASE}/proposicoes`);
+  url.searchParams.set("idDeputadoAutor", id);
+  for (const tipo of ["PEC", "PLP", "PL", "PDL"]) url.searchParams.append("siglaTipo", tipo);
+  url.searchParams.set("ordem", "DESC");
+  url.searchParams.set("ordenarPor", "id");
+  const dados = await paginarTudo<RawProposicao>(url.toString(), 20);
+  return dados.map(mapProposicao);
 }
 
 export async function getProposicoesPorAutor(

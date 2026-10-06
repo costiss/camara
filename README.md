@@ -40,7 +40,12 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
   they followed their party (the leader's orientation, or the majority of the
   party when there is none) and the government (Câmara only), and each vote
   with their position, what party and government asked for, and divergences.
-  Every member name in the app links here.
+  Every member name in the app links here. A second tab, **Propostas de
+  autoria** (`aba=propostas`), lists every bill they authored or co-authored
+  (Câmara and Senado): totals by year and type, status in plain words
+  ("virou lei", "aguardando a escolha de um relator"), filters by type, year,
+  status (Senado) and text, and a "Ver votação" button that opens the bill's
+  main vote inside the app.
 - **Lista** (`#/lista`) — every floor deliberation of both houses in a period
   (30/90 days or a year), faceted by result and bill type, with search and
   paging. A row opens the Votações panel on that vote.
@@ -57,7 +62,7 @@ Defaults are left out of the URL.
 | --- | --- |
 | `#/votacoes/<id>` | `uf`, `modo=plenario`, `mapa=1` (map expanded), `nominal=0` (feed shows every vote), `chamada=1` (roll-call open), `voto` (`sim`, `nao`, …), `nome`, `data` (Senate session date) |
 | `#/inspecionar/<id>` | `voto`, `partido`, `uf`, `nome`, `contra=1` (voted against the party), `ordem=partido\|uf\|voto`, `grupo=estado`, `secao=votos\|grupos` (scrolls to that section), `data` |
-| `#/parlamentar/<id>` | `periodo=30d\|90d\|<ano>`, `merito=0` (include procedural votes), `filtro=partido\|governo\|ausencias`, `q` |
+| `#/parlamentar/<id>` | `periodo=30d\|90d\|<ano>`, `merito=0` (include procedural votes), `filtro=partido\|governo\|ausencias`, `q`; with `aba=propostas`: `tipo`, `ano`, `fase`, `busca`, `pagina` |
 | `#/lista` | `casa=camara\|senado`, `periodo=30d\|90d\|<ano>`, `tipo` (`PEC`, `PL`, …), `resultado=aprovada\|rejeitada\|outros`, `nominal=1`, `q`, `ordem=antigas`, `pagina` |
 | `#/camara`, `#/senado` | `uf`, `partido`, `q` |
 | `#/agenda` | `periodo=realizados`, `tipo=plenario\|comissoes` |

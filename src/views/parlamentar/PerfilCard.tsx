@@ -4,11 +4,9 @@ import { Veredito } from "@/components/hud/proposta";
 import { MemberAvatar } from "@/components/shared";
 import { BarRowsSkeleton } from "@/components/hud/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useProposicoesPorAutor } from "@/hooks/useCamara";
+import { buscarVotacoesProposta, chaveVotacoesProposta, useAutoria, votacaoDeReferencia } from "@/hooks/useAutoria";
 import { routeHref, votacaoHref } from "@/hooks/useUi";
-import { getProposicaoVotacoes } from "@/lib/api";
-import { DeliberacaoBuilder } from "@/lib/deliberacoes";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 import { tipoDaProposta, tituloPopular } from "@/lib/linguagem";
 import { partyColor } from "@/lib/parties";
 import type { Parlamentar, Votacao } from "@/lib/types";
@@ -90,28 +88,17 @@ export function PerfilCard({ parlamentar }: { parlamentar: Parlamentar }) {
   );
 }
 
-/** The main vote of the latest session that voted the bill, preferring the floor over committees. */
-function votacaoDeReferencia(votacoes?: Votacao[]): Votacao | undefined {
-  if (!votacoes?.length) return undefined;
-  const plenario = votacoes.filter((v) => v.plenario);
-  return DeliberacaoBuilder.agrupar(plenario.length ? plenario : votacoes)[0]?.principal;
-}
-
 function juntarVotacoes(results: UseQueryResult<Votacao[]>[]) {
   return results.map((r) => ({ votacoes: r.data, carregando: r.isPending }));
 }
 
-/** Authored bills; each opens its latest vote inside the app, or says it has not been voted. */
-export function ProjetosCard({ id }: { id: string }) {
-  const numerico = id.replace(/^camara-/, "");
-  const { data, isLoading } = useProposicoesPorAutor(numerico);
-  const itens = (data ?? []).slice(0, 8);
+/** Latest authored bills; each opens its main vote inside the app, or says it has not been voted. */
+export function ProjetosCard({ parlamentar, onVerTodas }: { parlamentar?: Parlamentar; onVerTodas: () => void }) {
+  const { data, isLoading } = useAutoria(parlamentar);
+  const todas = data ?? [];
+  const itens = todas.slice(0, 5);
   const votacoes = useQueries({
-    queries: itens.map((p) => ({
-      queryKey: ["proposicao-votacoes", p.id],
-      queryFn: () => getProposicaoVotacoes(p.id),
-      staleTime: 30 * 60 * 1000,
-    })),
+    queries: itens.map((p) => ({ queryKey: chaveVotacoesProposta(p), queryFn: () => buscarVotacoesProposta(p), staleTime: 60 * 60 * 1000 })),
     combine: juntarVotacoes,
   });
 
@@ -121,7 +108,7 @@ export function ProjetosCard({ id }: { id: string }) {
         <h2 id="projetos-title">Propostas de autoria</h2>
         <span className="meta">mais recentes</span>
       </div>
-      {isLoading ? (
+      {isLoading || !parlamentar ? (
         <BarRowsSkeleton rows={4} label="Carregando propostas" />
       ) : itens.length === 0 ? (
         <p className="py-2 text-[12px] text-fg-4">Nenhuma proposta encontrada.</p>
@@ -140,9 +127,7 @@ export function ProjetosCard({ id }: { id: string }) {
                     <span className="mt-0.5 block text-[11px] text-fg-4">{meta}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[12px]">
                       <Veredito votacao={votacao} />
-                      <span className="text-fg-4">
-                        · {votacao.plenario ? "Plenário" : "comissão"}, {formatDate(votacao.data)}
-                      </span>
+                      <span className="text-fg-4">· {votacao.plenario || votacao.casa === "senado" ? "Plenário" : "comissão"}, {formatDate(votacao.data)}</span>
                     </span>
                   </a>
                 ) : (
@@ -151,13 +136,13 @@ export function ProjetosCard({ id }: { id: string }) {
                     <span className="mt-0.5 block text-[11px] text-fg-4">{meta}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-x-3 text-[12px]">
                       {estado?.carregando ? (
-                        <Skeleton className="h-3 w-24" />
+                        <span className="inline-block h-3 w-24 animate-pulse rounded-md bg-panel-3/70" aria-hidden="true" />
                       ) : (
                         <span className="text-fg-4">Ainda não votada</span>
                       )}
                       {p.url && (
                         <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-fg-3 hover:text-fg">
-                          Ver na Câmara <ExternalLink className="h-3 w-3" />
+                          Texto oficial <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
                     </span>
@@ -167,6 +152,11 @@ export function ProjetosCard({ id }: { id: string }) {
             );
           })}
         </ol>
+      )}
+      {todas.length > 0 && (
+        <button type="button" className="btn btn-sm btn-block mt-3" onClick={onVerTodas}>
+          Ver todas as {formatNumber(todas.length)} propostas
+        </button>
       )}
     </section>
   );

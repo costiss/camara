@@ -6,7 +6,7 @@
  * `asArray` smooths that over. Media URLs sometimes come back as
  * `http://` and are upgraded to avoid mixed-content blocking.
  */
-import type { ContextoProposta, Parlamentar, Votacao, VotoParlamentar } from "../types";
+import type { ContextoProposta, Parlamentar, Proposicao, Votacao, VotoParlamentar } from "../types";
 import { CADEIRAS, VotoClassifier, VoteTally } from "../votos";
 import { SENADO_BASE } from "./config";
 import { getJson } from "./http";
@@ -290,4 +290,53 @@ export async function getContextoMateria(codigoMateria: string): Promise<Context
     temas: [],
     autores: p.autoria ? [p.autoria] : [],
   };
+}
+
+interface RawProcessoAutor {
+  codigoMateria?: number;
+  identificacao?: string;
+  ementa?: string;
+  dataApresentacao?: string;
+  situacaoAtual?: string;
+  dataSituacaoAtual?: string;
+  tramitando?: string;
+  urlDocumento?: string;
+  autoria?: string;
+}
+
+const TIPOS_DE_LEI = new Set(["PEC", "PLP", "PL", "PDL", "PLS"]);
+
+/** Every bill a senator authored or co-authored, newest first; `nome` tells first author from co-author. */
+export async function getAutoriaSenador(codigo: string, nome?: string): Promise<Proposicao[]> {
+  const data = await getJson<RawProcessoAutor[]>(`${BASE}/processo?codigoParlamentarAutor=${encodeURIComponent(codigo)}`);
+  const primeiro = (autoria?: string) => (autoria ?? "").split(",")[0].toLowerCase();
+  return asArray(data)
+    .map((p): Proposicao | null => {
+      const m = /^(\S+)\s+(\d+)\/(\d{4})/.exec(p.identificacao ?? "");
+      if (!m || !TIPOS_DE_LEI.has(m[1]) || !p.codigoMateria) return null;
+      return {
+        id: String(p.codigoMateria),
+        casa: "senado",
+        tipo: m[1],
+        sigla: p.identificacao as string,
+        numero: Number(m[2]),
+        ano: Number(m[3]),
+        ementa: p.ementa ?? "",
+        apresentacao: p.dataApresentacao,
+        autor: p.autoria,
+        status: fraseNormal(p.situacaoAtual),
+        situacaoData: p.dataSituacaoAtual,
+        tramitando: p.tramitando === "Sim",
+        url: p.urlDocumento,
+        coautoria: nome ? !primeiro(p.autoria).includes(nome.toLowerCase()) : undefined,
+      };
+    })
+    .filter((p): p is Proposicao => p !== null)
+    .sort((a, b) => (b.apresentacao ?? "").localeCompare(a.apresentacao ?? ""));
+}
+
+/** Floor votes on one Senate matter. */
+export async function getSenadoVotacoesDaMateria(codigoMateria: string): Promise<Votacao[]> {
+  const data = await getJson<RawVotacaoPlenario[]>(`${BASE}/votacao?codigoMateria=${encodeURIComponent(codigoMateria)}`);
+  return asArray(data).filter((v) => v.dataSessao && v.codigoSessaoVotacao).map(mapVotacaoPlenario);
 }

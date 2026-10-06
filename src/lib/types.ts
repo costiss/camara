@@ -62,6 +62,8 @@ export interface Proposicao {
   despacho?: string;
   situacaoData?: string;
   tramitando?: boolean;
+  /** Listed as one of several authors rather than the first one. */
+  coautoria?: boolean;
   /** True when this proposition already has a recorded vote. */
   votado?: boolean;
   /** Date of the recorded vote (when known). */
