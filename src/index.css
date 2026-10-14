@@ -146,6 +146,13 @@
     .hud-grid-centro > .hud-col:last-child {
       order: -1;
     }
+    /* Centre first, then the left column, then the right one. */
+    .hud-grid-centro-esq > .hud-center {
+      order: -2;
+    }
+    .hud-grid-centro-esq > .hud-col:first-child {
+      order: -1;
+    }
   }
   @media (min-width: 1180px) {
     .hud {

@@ -9,9 +9,11 @@ import type {
   OrientacaoBancada,
   Parlamentar,
   Partido,
+  ItemAoVivo,
   Placar,
   Proposicao,
   SessaoAoVivo,
+  SessaoPauta,
   Tramitacao,
   Votacao,
   VotoParlamentar,
@@ -27,6 +29,12 @@ const BASE = CAMARA_BASE;
 const limit = createLimiter(VIA_PROXY ? 8 : 3);
 const getApi = <T>(url: string, init?: RequestInit) => limit(() => getJson<T>(url, init));
 const getApiPaged = <T>(url: string) => limit(() => getPaged<T>(url));
+
+/** GET a `{ dados: [...] }` endpoint and hand back the array. */
+const getDados = async <T>(url: string): Promise<T[]> => {
+  const { dados } = await getApi<{ dados: T[] }>(url);
+  return dados ?? [];
+};
 
 /* ----------------------------- raw shapes ----------------------------- */
 
@@ -399,10 +407,7 @@ export async function getAutores(id: number | string): Promise<Autor[]> {
 export async function getProposicaoVotacoes(
   id: number | string
 ): Promise<Votacao[]> {
-  const { dados } = await getApi<{ dados: RawVotacao[] }>(
-    `${BASE}/proposicoes/${id}/votacoes`
-  );
-  return (dados ?? []).map(mapVotacao);
+  return (await getDados<RawVotacao>(`${BASE}/proposicoes/${id}/votacoes`)).map(mapVotacao);
 }
 
 export async function getVotacao(id: string): Promise<Votacao> {
@@ -500,10 +505,7 @@ export async function getEventos(q: {
 }
 
 export async function getEventoPauta(eventoId: number | string): Promise<Proposicao[]> {
-  const { dados } = await getApi<{ dados: RawPautaItem[] }>(
-    `${BASE}/eventos/${eventoId}/pauta`
-  );
-  return (dados ?? []).map(mapPautaItem);
+  return (await getPautaBruta(eventoId)).map(mapPautaItem);
 }
 
 /* --------------------------- live floor session ------------------------- */
@@ -516,25 +518,30 @@ function urlDoItem(item: RawPautaItem): string | undefined {
   return item.proposicao_ ? mapProposicao(item.proposicao_).url : undefined;
 }
 
-function normalizarSessaoCamara(e: Evento, pauta: RawPautaItem[]): SessaoAoVivo {
+/** Normalises a published order paper; the item on the floor is the first undecided. */
+function itensDaPauta(pauta: RawPautaItem[]): ItemAoVivo[] {
   const atual = pauta.findIndex((it) => it.situacaoItem && !it.uriVotacao);
+  return pauta.map((it, i) =>
+    itemAoVivo({
+      id: it.titulo || String(it.ordem),
+      sigla: it.proposicao_ ? siglaDe(it.proposicao_) : it.titulo,
+      qualificador: it.topico,
+      ementa: it.proposicao_?.ementa ?? it.titulo,
+      decidida: !!it.uriVotacao,
+      atual: i === atual,
+      detalhe: it.situacaoItem ?? undefined,
+      pendente: "Na pauta",
+      url: urlDoItem(it),
+    })
+  );
+}
+
+function normalizarSessaoCamara(e: Evento, pauta: RawPautaItem[]): SessaoAoVivo {
   return {
     casa: "camara",
     titulo: "Plenário da Câmara",
     meta: [e.tipo, e.inicio.slice(11, 16)].filter(Boolean).join(" · "),
-    itens: pauta.map((it, i) =>
-      itemAoVivo({
-        id: it.titulo || String(it.ordem),
-        sigla: it.proposicao_ ? siglaDe(it.proposicao_) : it.titulo,
-        qualificador: it.topico,
-        ementa: it.proposicao_?.ementa ?? it.titulo,
-        decidida: !!it.uriVotacao,
-        atual: i === atual,
-        detalhe: it.situacaoItem ?? undefined,
-        pendente: "Na pauta",
-        url: urlDoItem(it),
-      })
-    ),
+    itens: itensDaPauta(pauta),
   };
 }
 
@@ -549,10 +556,38 @@ export async function getSessaoCamara(data: string): Promise<SessaoAoVivo | unde
   const eventos = await getEventos({ dataInicio: data, dataFim: data, ordem: "ASC" });
   const ativo = eventos.find(ehPlenariaEmCurso);
   if (!ativo) return undefined;
-  const { dados } = await getApi<{ dados: RawPautaItem[] }>(
-    `${BASE}/eventos/${ativo.id.replace(/^camara-/, "")}/pauta`
-  );
-  return normalizarSessaoCamara(ativo, dados ?? []);
+  return normalizarSessaoCamara(ativo, await getPautaBruta(ativo.id));
+}
+
+/* ------------------------------ pauta inspector ------------------------- */
+
+async function getPautaBruta(eventoId: number | string): Promise<RawPautaItem[]> {
+  return getDados<RawPautaItem>(`${BASE}/eventos/${String(eventoId).replace(/^camara-/, "")}/pauta`);
+}
+
+/** The full order paper of a Câmara event, for the pauta inspector. */
+export async function getPautaEvento(eventoId: number | string): Promise<ItemAoVivo[]> {
+  return itensDaPauta(await getPautaBruta(eventoId));
+}
+
+/** The Câmara sessions of a period, for the pauta inspector. */
+export async function getSessoesCamara(q: {
+  dataInicio: string;
+  dataFim: string;
+  ordem?: "ASC" | "DESC";
+}): Promise<SessaoPauta[]> {
+  const eventos = await getEventos(q);
+  return eventos.map((e) => ({
+    id: e.id,
+    casa: "camara" as const,
+    data: e.inicio.slice(0, 10),
+    hora: e.inicio.slice(11, 16),
+    tipo: e.tipo,
+    orgao: e.orgao,
+    situacao: e.situacao,
+    aoVivo: /andamento/i.test(e.situacao),
+    itens: [],
+  }));
 }
 
 export async function countVotacoes(

@@ -56,6 +56,9 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
   announced verdict), **under consideration** (the item the floor is on, marked
   as the focal point), or **pending**. Only the decided items, the one on the
   floor and a few pending ones are listed, so the panel stays short on a phone.
+  A **Pautas** tab lists every session that has an order paper in the period —
+  both houses, live and past — each opening in place to its full pauta, so the
+  official site is not needed to read it.
 
 Ctrl K searches deputies, senators and recent votes.
 

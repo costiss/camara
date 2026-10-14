@@ -6,7 +6,7 @@
  * `asArray` smooths that over. Media URLs sometimes come back as
  * `http://` and are upgraded to avoid mixed-content blocking.
  */
-import type { ContextoProposta, Parlamentar, Proposicao, SessaoAoVivo, Votacao, VotoParlamentar } from "../types";
+import type { ContextoProposta, ItemAoVivo, Parlamentar, Proposicao, SessaoAoVivo, SessaoPauta, Votacao, VotoParlamentar } from "../types";
 import { itemAoVivo } from "../aoVivo";
 import { CADEIRAS, VotoClassifier, VoteTally } from "../votos";
 import { SENADO_BASE } from "./config";
@@ -394,6 +394,12 @@ interface RawItemPauta {
 
 interface RawResultadoSessao {
   codigoSessao?: string | number;
+  numeroSessao?: string;
+  dataSessao?: string;
+  horaSessao?: string;
+  tipoSessao?: string;
+  descricaoTipoSessao?: string;
+  siglaCasa?: string;
   Itens?: { Item?: RawItemPauta | RawItemPauta[] };
 }
 
@@ -453,25 +459,30 @@ function rotuloPendente(deliberacao?: string): string {
   return /não concluída/i.test(deliberacao ?? "") ? "Discussão em andamento" : "Ainda não votado";
 }
 
+/** Normalises a published order paper; the item on the floor is the first undecided. */
+function itensSenado(itens: ItemPauta[]): ItemAoVivo[] {
+  const atual = itens.findIndex((it) => !it.apreciado);
+  return itens.map((it, i) =>
+    itemAoVivo({
+      id: it.codigo || String(i),
+      sigla: it.sigla ?? it.identificacao,
+      qualificador: it.cabecalho,
+      ementa: it.ementa,
+      decidida: it.apreciado,
+      atual: i === atual,
+      detalhe: it.apreciado && it.resultado ? clausulaMateria(it.resultado) : undefined,
+      pendente: rotuloPendente(it.deliberacao),
+      url: it.url,
+    })
+  );
+}
+
 function normalizar(s: SessaoPlenario): SessaoAoVivo {
-  const atual = s.itens.findIndex((it) => !it.apreciado);
   return {
     casa: "senado",
     titulo: "Plenário do Senado",
     meta: [s.numero && `${s.numero}ª sessão`, s.tipo?.toLowerCase(), s.hora].filter(Boolean).join(" · "),
-    itens: s.itens.map((it, i) =>
-      itemAoVivo({
-        id: it.codigo || String(i),
-        sigla: it.sigla ?? it.identificacao,
-        qualificador: it.cabecalho,
-        ementa: it.ementa,
-        decidida: it.apreciado,
-        atual: i === atual,
-        detalhe: it.apreciado && it.resultado ? clausulaMateria(it.resultado) : undefined,
-        pendente: rotuloPendente(it.deliberacao),
-        url: it.url,
-      })
-    ),
+    itens: itensSenado(s.itens),
   };
 }
 
@@ -489,4 +500,52 @@ export async function getSessaoSenado(data: string): Promise<SessaoAoVivo | unde
   if (!ativa) return undefined;
   const resultado = await getPlenarioResultado(data);
   return normalizar({ ...ativa, itens: resultado.get(ativa.codigo) ?? [] });
+}
+
+/* ------------------------------ pauta inspector ------------------------- */
+
+/** `14/10/2026` → `2026-10-14`. */
+function isoDeBR(s?: string): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(s ?? "");
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : (s ?? "");
+}
+
+/** `YYYYMM01` for every month the window touches. */
+function mesesDoIntervalo(ini: string, fim: string): string[] {
+  const out: string[] = [];
+  const d = new Date(`${ini}T12:00:00`);
+  const end = new Date(`${fim}T12:00:00`);
+  while (d <= end) {
+    out.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}01`);
+    d.setMonth(d.getMonth() + 1);
+  }
+  return out;
+}
+
+async function getResultadoMes(mes: string): Promise<RawResultadoSessao[]> {
+  const d = await getJson<{ ResultadoPlenario?: { Sessoes?: { Sessao?: RawResultadoSessao | RawResultadoSessao[] } } }>(
+    `${BASE}/plenario/resultado/mes/${mes}`
+  );
+  return asArray(d.ResultadoPlenario?.Sessoes?.Sessao);
+}
+
+/** Senate floor sessions with an order paper, for the pauta inspector. */
+export async function getSessoesSenado(intervalo: { ini: string; fim: string }): Promise<SessaoPauta[]> {
+  const partes = await Promise.all(mesesDoIntervalo(intervalo.ini, intervalo.fim).map(getResultadoMes));
+  const out: SessaoPauta[] = [];
+  for (const s of partes.flat()) {
+    const itens = asArray(s.Itens?.Item).map(mapItemPauta);
+    if (itens.length === 0) continue;
+    out.push({
+      id: `senado-${s.codigoSessao ?? ""}`,
+      casa: "senado",
+      data: isoDeBR(s.dataSessao),
+      hora: s.horaSessao,
+      tipo: s.descricaoTipoSessao ?? s.tipoSessao ?? "Sessão",
+      orgao: "Plenário",
+      aoVivo: false,
+      itens: itensSenado(itens),
+    });
+  }
+  return out.sort((a, b) => b.data.localeCompare(a.data));
 }

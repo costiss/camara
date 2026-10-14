@@ -212,6 +212,22 @@ export interface SessaoAoVivo {
   itens: ItemAoVivo[];
 }
 
+/** A session's order paper, past or live, for the pauta inspector. */
+export interface SessaoPauta {
+  /** Namespaced id, e.g. `camara-83057` or `senado-591267`. */
+  id: string;
+  casa: Casa;
+  /** YYYY-MM-DD. */
+  data: string;
+  hora?: string;
+  tipo: string;
+  orgao?: string;
+  situacao?: string;
+  aoVivo: boolean;
+  /** Order-paper items; for a Câmara event they arrive when it is opened. */
+  itens: ItemAoVivo[];
+}
+
 export interface Partido {
   sigla: string;
   nome: string;

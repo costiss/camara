@@ -2,26 +2,30 @@ import { useMemo, useState } from "react";
 import { DeliberacaoFeed } from "@/components/hud/DeliberacaoFeed";
 import { HudGrid } from "@/components/hud/HudGrid";
 import { VotesDock } from "@/components/hud/VotesDock";
-import { ErrorState, LoadingRows } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PainelAoVivo, PainelAoVivoSkeleton } from "@/components/hud/PainelAoVivo";
 import { useEventos, useSessaoCamara } from "@/hooks/useCamara";
 import { useSessaoSenado } from "@/hooks/useSenado";
+import { useSessoes } from "@/hooks/useSessoes";
 import { useQueryEnum } from "@/hooks/useUi";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { addDays, formatTime, isoDate, startOfDay } from "@/lib/format";
 import type { SessaoAoVivoResult } from "@/lib/aoVivo";
-import type { Evento } from "@/lib/types";
+import type { Evento, SessaoPauta } from "@/lib/types";
 import { EventoItem } from "./EventoItem";
+import { ListaDias } from "./ListaDias";
+import { PautaSessao } from "./PautaSessao";
 
 type Janela = "proximos" | "realizados";
 type Tipo = "todos" | "plenario" | "comissoes";
+type Aba = "eventos" | "pautas";
 const JANELAS: readonly Janela[] = ["proximos", "realizados"];
 const TIPOS: readonly Tipo[] = ["todos", "plenario", "comissoes"];
-
-const diaFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+const ABAS: readonly Aba[] = ["eventos", "pautas"];
 
 const ehPlenario = (e: Evento) => /^sess[ãa]o/i.test(e.tipo) || /^(PLEN|Plen[áa]rio)$/i.test(e.orgao ?? "");
+const ehSessaoPlenaria = (s: SessaoPauta) =>
+  s.casa === "senado" || /^sess[ãa]o/i.test(s.tipo) || /^(PLEN|Plen[áa]rio)$/i.test(s.orgao ?? "");
 
 /** The live panel of one house, or its placeholder while the day is loading. */
 function PainelSessao({ resultado, titulo }: { resultado: SessaoAoVivoResult; titulo: string }) {
@@ -80,9 +84,15 @@ export function AgendaView() {
   const hoje = startOfDay(new Date(agora));
   const [janela, setJanela] = useQueryEnum<Janela>("periodo", JANELAS, "proximos");
   const [tipo, setTipo] = useQueryEnum<Tipo>("tipo", TIPOS, "todos");
+  const [aba, setAba] = useQueryEnum<Aba>("aba", ABAS, "eventos");
   const proximosQ = useEventos({ dataInicio: isoDate(hoje), dataFim: isoDate(addDays(hoje, 21)), ordem: "ASC" });
   const realizadosQ = useEventos({ dataInicio: isoDate(addDays(hoje, -21)), dataFim: isoDate(hoje), ordem: "DESC" });
   const eventosQ = janela === "proximos" ? proximosQ : realizadosQ;
+  const sessoesQ = useSessoes(
+    janela === "proximos"
+      ? { ini: isoDate(hoje), fim: isoDate(addDays(hoje, 21)) }
+      : { ini: isoDate(addDays(hoje, -21)), fim: isoDate(hoje) }
+  );
   const feed = useDeliberacoes();
   const camara = useSessaoCamara();
   const senado = useSessaoSenado();
@@ -99,9 +109,22 @@ export function AgendaView() {
     return [...map.entries()];
   }, [todos, janela, tipo, agora]);
 
+  const diasPauta = useMemo(() => {
+    const lista = sessoesQ.sessoes
+      .filter((s) => tipo === "todos" || (tipo === "plenario") === ehSessaoPlenaria(s))
+      .sort((a, b) => (janela === "proximos" ? 1 : -1) * a.data.localeCompare(b.data));
+    const map = new Map<string, SessaoPauta[]>();
+    for (const s of lista) map.set(s.data, [...(map.get(s.data) ?? []), s]);
+    return [...map.entries()];
+  }, [sessoesQ.sessoes, tipo, janela]);
+
   const center = (
-    <section className="card flex h-full min-h-[480px] flex-col" aria-label="Eventos">
+    <section className="card flex h-full min-h-[480px] flex-col" aria-label={aba === "pautas" ? "Pautas das sessões" : "Eventos"}>
       <div className="flex flex-wrap items-center gap-2">
+        <div className="switch switch-sm" role="group" aria-label="Visão">
+          <button type="button" aria-pressed={aba === "eventos"} onClick={() => setAba("eventos")}>Eventos</button>
+          <button type="button" aria-pressed={aba === "pautas"} onClick={() => setAba("pautas")}>Pautas</button>
+        </div>
         <div className="switch switch-sm" role="group" aria-label="Período">
           <button type="button" aria-pressed={janela === "proximos"} onClick={() => setJanela("proximos")}>Próximos</button>
           <button type="button" aria-pressed={janela === "realizados"} onClick={() => setJanela("realizados")}>Já realizados</button>
@@ -115,25 +138,28 @@ export function AgendaView() {
         </div>
       </div>
       <div className="quiet-scroll mt-3 min-h-0 flex-1 overflow-y-auto">
-        {eventosQ.isLoading ? (
-          <LoadingRows rows={6} height={56} />
-        ) : eventosQ.isError ? (
-          <ErrorState compact onRetry={() => eventosQ.refetch()} />
-        ) : dias.length === 0 ? (
-          <p className="py-12 text-center text-[12px] text-fg-4">Nenhum evento neste período.</p>
+        {aba === "pautas" ? (
+          <ListaDias
+            grupos={diasPauta}
+            chave={(s) => s.id}
+            isLoading={sessoesQ.isLoading}
+            isError={sessoesQ.isError}
+            onRetry={sessoesQ.refetch}
+            vazio="Nenhuma pauta neste período."
+          >
+            {(s) => <PautaSessao s={s} />}
+          </ListaDias>
         ) : (
-          dias.map(([dia, eventos]) => (
-            <div key={dia} className="mb-2">
-              <h2 className="sticky top-0 z-[1] bg-panel/95 py-2 text-[12px] font-medium text-fg-3 backdrop-blur first-letter:uppercase">
-                {diaFmt.format(new Date(`${dia}T12:00:00`))}
-              </h2>
-              {eventos.map((e, i) => (
-                <div key={e.id} className={i > 0 ? "rowline" : undefined}>
-                  <EventoItem e={e} />
-                </div>
-              ))}
-            </div>
-          ))
+          <ListaDias
+            grupos={dias}
+            chave={(e) => e.id}
+            isLoading={eventosQ.isLoading}
+            isError={eventosQ.isError}
+            onRetry={eventosQ.refetch}
+            vazio="Nenhum evento neste período."
+          >
+            {(e) => <EventoItem e={e} />}
+          </ListaDias>
         )}
       </div>
     </section>
@@ -141,6 +167,7 @@ export function AgendaView() {
 
   return (
     <HudGrid
+      centroAntes
       left={
         <>
           <PainelSessao resultado={camara} titulo="o Plenário da Câmara" />

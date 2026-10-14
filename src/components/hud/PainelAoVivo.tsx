@@ -92,6 +92,19 @@ function recortar(itens: ItemAoVivo[]): { visiveis: ItemAoVivo[]; restantes: num
   return { visiveis: itens.slice(0, i), restantes: itens.length - i };
 }
 
+/** A full order paper, every item — the pauta inspector's body. */
+export function ListaPauta({ itens, className }: { itens: ItemAoVivo[]; className?: string }) {
+  return (
+    <ol className={cn("flex flex-col", className)}>
+      {itens.map((item, i) => (
+        <li key={item.id || i} className={cn(i > 0 && "rowline")}>
+          <LinhaItem item={item} />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** The live order paper of one house: what is being decided, right now. */
 export function PainelAoVivo({ sessao, className }: { sessao: SessaoAoVivo; className?: string }) {
   const votados = sessao.itens.filter((it) => it.estado === "decidida").length;
@@ -114,13 +127,7 @@ export function PainelAoVivo({ sessao, className }: { sessao: SessaoAoVivo; clas
         <p className="mt-3 text-[12px] text-fg-4">Pauta ainda não publicada.</p>
       ) : (
         <>
-          <ol className="mt-2 flex flex-col">
-            {visiveis.map((item, i) => (
-              <li key={item.id || i} className={cn(i > 0 && "rowline")}>
-                <LinhaItem item={item} />
-              </li>
-            ))}
-          </ol>
+          <ListaPauta itens={visiveis} className="mt-2" />
           {restantes > 0 && (
             <p className="mt-2 text-[12px] text-fg-4">
               mais {restantes} {restantes === 1 ? "item" : "itens"} na pauta
