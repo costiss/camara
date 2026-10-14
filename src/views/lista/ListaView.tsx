@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { ErrorState, LoadingRows } from "@/components/shared";
+import { useItensAoVivo } from "@/hooks/useAoVivo";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { POR_PAGINA } from "@/lib/filtroVotacoes";
 import { formatNumber } from "@/lib/format";
@@ -15,6 +16,7 @@ export function ListaView() {
   const { filtro, definir, nominal } = useFiltroVotacoes();
   const [soNominais, setSoNominais] = nominal;
   const feed = useDeliberacoes(filtro.casa, filtro.periodo);
+  const aoVivo = useItensAoVivo(filtro.casa);
   const opcoes = useMemo(() => Periodo.opcoes(), []);
 
   const filtradas = useMemo(() => filtro.filtrar(feed.deliberacoes), [filtro, feed.deliberacoes]);
@@ -95,7 +97,7 @@ export function ListaView() {
           ) : visiveis.length === 0 ? (
             <p className="py-12 text-center text-[12px] text-fg-4">Nenhuma votação com esses filtros.</p>
           ) : (
-            <ListaTabela itens={visiveis} />
+            <ListaTabela itens={visiveis} aoVivo={aoVivo} />
           )}
         </div>
 
