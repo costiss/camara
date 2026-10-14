@@ -5,6 +5,7 @@ import { VotesDock } from "@/components/hud/VotesDock";
 import { ErrorState } from "@/components/shared";
 import { HeroSkeleton, MapaCantoSkeleton, PartyBreakdownSkeleton } from "@/components/hud/skeletons";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
+import { useItensAoVivo } from "@/hooks/useAoVivo";
 import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
 import { router, useQueryParam, useRoute, type Query } from "@/hooks/useUi";
 import { useNominal } from "@/hooks/useNominal";
@@ -18,6 +19,7 @@ import { NavegacaoVotacao } from "./NavegacaoVotacao";
 
 export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
   const feed = useDeliberacoes();
+  const aoVivo = useItensAoVivo();
   const padrao = useMemo(
     () => (feed.deliberacoes.find((d) => d.principal.nominal) ?? feed.deliberacoes[0])?.principal.id,
     [feed.deliberacoes]
@@ -84,6 +86,7 @@ export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
       {!carregando && !feed.isLoading && deliberacao && id && <DeliberacaoSteps deliberacao={deliberacao} currentId={id} hrefQuery={manter} />}
       <DeliberacaoFeed
         deliberacoes={feed.deliberacoes}
+        aoVivo={aoVivo}
         currentId={id}
         isLoading={feed.isLoading}
         isError={feed.isError}

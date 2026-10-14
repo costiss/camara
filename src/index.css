@@ -245,6 +245,31 @@
     outline-offset: -2px;
   }
 
+  /* Live session rows: a quiet red tint and a left rule group the items of a
+     session in progress at the top of the votes list and the latest-votes feed;
+     the "ao vivo" stamp names what the tint means. */
+  .ao-vivo-linha {
+    background: color-mix(in oklab, var(--color-red) 5%, transparent);
+  }
+  .ao-vivo-linha > td:first-child,
+  li.ao-vivo-linha,
+  a.ao-vivo-linha,
+  div.ao-vivo-linha {
+    box-shadow: inset 2px 0 0 var(--color-red);
+  }
+  .lista-tabela tbody tr.ao-vivo-linha:hover {
+    background: color-mix(in oklab, var(--color-red) 9%, transparent);
+  }
+  .ao-vivo-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--color-red);
+  }
+
   /* Cards ----------------------------------------------------------- */
   .card {
     background: var(--color-glass);

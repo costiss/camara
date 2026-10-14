@@ -22,8 +22,10 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
   The vote is the centre of the page: verdict, plain-language title, score,
   required majority, what was being decided, and how each party voted. A bar
   on top goes back to the list and steps to the next newer/older vote. The
-  left column is the menu (steps of this vote, latest votes); the map and the
-  hemicycle sit in a small corner card that expands into a dialog.
+  left column is the menu (steps of this vote, latest votes) — while a floor is
+  in session, the items still to be decided lead that latest-votes list, stamped
+  **ao vivo** — and the map and the hemicycle sit in a small corner card that
+  expands into a dialog.
 - **Para leigos** (on the vote and inspect pages, collapsed by default, `leigos=1`)
   — where the proposal stands today (e.g. "virou a Lei Complementar 237/2026,
   com vetos parciais", from the Câmara/Senado status), what voting Sim or Não
@@ -48,7 +50,9 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
   main vote inside the app.
 - **Lista** (`#/lista`) — every floor deliberation of both houses in a period
   (30/90 days or a year), faceted by result and bill type, with search and
-  paging. A row opens the Votações panel on that vote.
+  paging. A row opens the Votações panel on that vote. While a floor is in
+  session, the items still to be decided head the list as its first rows,
+  stamped **ao vivo**, ahead of the recorded deliberations.
 - **Agenda** — upcoming and past Câmara events with their pauta. While either
   floor is in session, the left column shows that session's order paper live,
   refreshed on a timer and flagged by an **Ao vivo** badge in the header (naming
