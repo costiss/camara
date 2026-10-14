@@ -1,4 +1,4 @@
-import { routeHref, votacaoHref } from "@/hooks/useUi";
+import { routeHref, votacaoHref, type Query } from "@/hooks/useUi";
 import { Veredito } from "@/components/hud/proposta";
 import { lerVotacao } from "@/lib/linguagem";
 import type { Deliberacao } from "@/lib/deliberacoes";
@@ -13,13 +13,13 @@ function quando(dataHora: string) {
   return { dia, hora };
 }
 
-function FeedItem({ d, current }: { d: Deliberacao; current: boolean }) {
+function FeedItem({ d, current, hrefQuery }: { d: Deliberacao; current: boolean; hrefQuery?: Query }) {
   const v = d.principal;
   const leitura = lerVotacao({ ...v, ementa: d.ementa ?? v.ementa, proposicao: d.proposicao ?? v.proposicao });
   const { dia, hora } = quando(d.dataHora);
   const extra = d.votacoes.length - 1;
   return (
-    <a href={votacaoHref(v)} className="ev no-underline" aria-current={current || undefined}>
+    <a href={votacaoHref(v, hrefQuery)} className="ev no-underline" aria-current={current || undefined}>
       <span className="tn pt-px text-[12px] leading-tight text-fg-3">
         {dia}
         {hora && <span className="block text-fg-5">{hora}</span>}
@@ -51,6 +51,7 @@ export function DeliberacaoFeed({
   casa,
   soNominais,
   onSoNominais,
+  hrefQuery,
   limit = 14,
   className,
 }: {
@@ -64,6 +65,8 @@ export function DeliberacaoFeed({
   /** When set, shows a toggle that keeps only deliberations with a roll-call vote. */
   soNominais?: boolean;
   onSoNominais?: (ativo: boolean) => void;
+  /** Query carried on each item's link, so a filter survives the click. */
+  hrefQuery?: Query;
   limit?: number;
   className?: string;
 }) {
@@ -98,7 +101,7 @@ export function DeliberacaoFeed({
         <div className="-mx-2 flex flex-col">
           {shown.map((d, i) => (
             <div key={d.key} className={cn(i > 0 && "rowline")}>
-              <FeedItem d={d} current={d.votacoes.some((v) => v.id === currentId)} />
+              <FeedItem d={d} current={d.votacoes.some((v) => v.id === currentId)} hrefQuery={hrefQuery} />
             </div>
           ))}
         </div>

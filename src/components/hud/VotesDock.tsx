@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { router, votacaoHref } from "@/hooks/useUi";
+import { router, votacaoHref, type Query } from "@/hooks/useUi";
 import { addDays, isoDate } from "@/lib/format";
 import type { Deliberacao } from "@/lib/deliberacoes";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,10 +20,13 @@ export function VotesDock({
   deliberacoes,
   currentDate,
   isLoading,
+  hrefQuery,
 }: {
   deliberacoes: Deliberacao[];
   currentDate?: string;
   isLoading?: boolean;
+  /** Query carried when a day's tick opens its vote, so a filter survives. */
+  hrefQuery?: Query;
 }) {
   const [hoje] = useState(() => new Date());
   const dias = useMemo(() => {
@@ -72,7 +75,7 @@ export function VotesDock({
                 type="button"
                 role="listitem"
                 disabled={!d.primeira}
-                onClick={() => d.primeira && router.abrir(votacaoHref(d.primeira.principal))}
+                onClick={() => d.primeira && router.abrir(votacaoHref(d.primeira.principal, hrefQuery))}
                 title={`${dd}/${m}: ${d.camara} na Câmara, ${d.senado} no Senado`}
                 aria-label={`${dd}/${m}: ${n} votações`}
                 className={cn(

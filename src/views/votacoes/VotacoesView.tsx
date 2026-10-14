@@ -6,7 +6,7 @@ import { ErrorState } from "@/components/shared";
 import { HeroSkeleton, MapaCantoSkeleton, PartyBreakdownSkeleton } from "@/components/hud/skeletons";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
-import { router, useQueryParam, useRoute } from "@/hooks/useUi";
+import { router, useQueryParam, useRoute, type Query } from "@/hooks/useUi";
 import { useNominal } from "@/hooks/useNominal";
 import { DeliberacaoSteps } from "./DeliberacaoSteps";
 import { ParaLeigos } from "./ParaLeigos";
@@ -32,6 +32,10 @@ export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
 
   const [uf, selectUf] = useQueryParam("uf");
   const [soNominais, setSoNominais] = useNominal(true);
+  // Carry an explicit filter choice through this view's own links (steps, feed,
+  // dock), so it survives a click even where storage is unavailable.
+  const nominalParam = query.get("nominal");
+  const manter: Query | undefined = nominalParam ? { nominal: nominalParam } : undefined;
   const activeUf = uf || null;
   const rollCall = query.get("chamada") === "1";
   const setRollCall = (aberta: boolean) =>
@@ -77,7 +81,7 @@ export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
 
   const left = (
     <>
-      {!carregando && !feed.isLoading && deliberacao && id && <DeliberacaoSteps deliberacao={deliberacao} currentId={id} />}
+      {!carregando && !feed.isLoading && deliberacao && id && <DeliberacaoSteps deliberacao={deliberacao} currentId={id} hrefQuery={manter} />}
       <DeliberacaoFeed
         deliberacoes={feed.deliberacoes}
         currentId={id}
@@ -86,6 +90,7 @@ export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
         onRetry={feed.refetch}
         soNominais={soNominais}
         onSoNominais={setSoNominais}
+        hrefQuery={manter}
       />
     </>
   );
@@ -103,7 +108,7 @@ export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
         left={left}
         center={center}
         right={right}
-        dock={<VotesDock deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} currentDate={votacao?.data.slice(0, 10)} />}
+        dock={<VotesDock deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} currentDate={votacao?.data.slice(0, 10)} hrefQuery={manter} />}
       />
       {votacao && (
         <RollCallSheet

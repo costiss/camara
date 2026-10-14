@@ -1,4 +1,4 @@
-import { inspecaoHref, votacaoHref } from "@/hooks/useUi";
+import { inspecaoHref, votacaoHref, type Query } from "@/hooks/useUi";
 import { formatTime } from "@/lib/format";
 import { Veredito } from "@/components/hud/proposta";
 import { etapaDaVotacao } from "@/lib/linguagem";
@@ -6,10 +6,12 @@ import type { Deliberacao } from "@/lib/deliberacoes";
 import { cn } from "@/lib/utils";
 
 /** Every vote of the same proposition in the same session, oldest first. */
-export function DeliberacaoSteps({ deliberacao, currentId, destino = "painel" }: {
+export function DeliberacaoSteps({ deliberacao, currentId, destino = "painel", hrefQuery }: {
   deliberacao: Deliberacao;
   currentId: string;
   destino?: "painel" | "inspecao";
+  /** Query carried on each step's link, so a filter survives the click. */
+  hrefQuery?: Query;
 }) {
   if (deliberacao.votacoes.length < 2) return null;
   const passos = [...deliberacao.votacoes].reverse();
@@ -26,7 +28,7 @@ export function DeliberacaoSteps({ deliberacao, currentId, destino = "painel" }:
           return (
             <li key={v.id} className="timeline-item" data-current={atual}>
               <a
-                href={destino === "inspecao" ? inspecaoHref(v) : votacaoHref(v)}
+                href={destino === "inspecao" ? inspecaoHref(v, hrefQuery) : votacaoHref(v, hrefQuery)}
                 className={cn("block rounded-md no-underline", atual ? "text-fg" : "text-fg-2 hover:text-fg")}
                 aria-current={atual || undefined}
                 title={v.descricao}
