@@ -18,7 +18,7 @@ export function AoVivoBadge({ className }: { className?: string }) {
     <a
       href={routeHref("agenda")}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-red/30 bg-red/10 px-2.5 py-1 text-[12px] font-medium text-red no-underline transition-colors hover:border-red/50",
+        "inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-red/30 bg-red/10 px-2.5 py-1 text-[12px] font-medium text-red no-underline transition-colors hover:border-red/50",
         className
       )}
       title="Plenário em sessão — ver a pauta ao vivo"

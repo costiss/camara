@@ -15,7 +15,7 @@ const VIEWS: { id: View; label: string }[] = [
 
 function Brand() {
   return (
-    <a href={routeHref("votacoes")} className="flex items-baseline gap-2 no-underline">
+    <a href={routeHref("votacoes")} className="flex items-baseline gap-2 whitespace-nowrap no-underline">
       <span className="font-serif text-[22px] leading-none tracking-[-0.01em] text-fg">
         Congresso Aberto
       </span>
@@ -50,10 +50,10 @@ function StatusLine() {
   const { hora, atualizando } = useUltimaAtualizacao();
   return (
     <div className="flex items-center gap-2">
-      <span className="flex items-center gap-2 text-[12px] text-fg-2" role="status" aria-live="polite">
+      <span className="flex items-center gap-2 whitespace-nowrap text-[12px] text-fg-2" role="status" aria-live="polite">
         <span className={cn("h-1.5 w-1.5 rounded-full bg-fg", atualizando && "live-dot")} />
         {atualizando ? "Atualizando…" : `Atualizado às ${hora}`}
-        <span className="hidden text-fg-4 xl:inline">· dados abertos oficiais</span>
+        <span className="hidden text-fg-4 2xl:inline">· dados abertos oficiais</span>
       </span>
       <button
         type="button"
@@ -88,7 +88,7 @@ function FullscreenButton() {
 
 export function HudHeader({ view, onSearch }: { view: View; onSearch: () => void }) {
   return (
-    <header className="flex flex-col gap-3 lg:h-11 lg:flex-row lg:items-center lg:gap-6">
+    <header className="flex flex-col gap-3 lg:h-11 lg:flex-row lg:items-center lg:gap-4 xl:gap-6">
       <div className="flex items-center justify-between gap-3">
         <Brand />
         <button type="button" className="icon-btn lg:hidden" aria-label="Buscar" onClick={onSearch}>
