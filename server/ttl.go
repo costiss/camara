@@ -35,6 +35,11 @@ var camaraTTL = TTLPolicy{
 		rule(`^/votacoes/[^/]+/(votos|orientacoes)$`, 6*time.Hour),
 		rule(`^/votacoes/[^/]+$`, 6*time.Hour),
 		rule(`^/votacoes$`, 5*time.Minute),
+		// Live floor activity: short enough to notice a session start and to
+		// follow its order paper, long enough to share one upstream call.
+		rule(`^/eventos/\d+/pauta$`, 30*time.Second),
+		rule(`^/eventos$`, 60*time.Second),
+		rule(`^/eventos/\d+$`, 5*time.Minute),
 		rule(`^/eventos`, 10*time.Minute),
 		rule(`^/deputados`, 6*time.Hour),
 		rule(`^/partidos`, 24*time.Hour),

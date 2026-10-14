@@ -4,13 +4,15 @@ import { HudGrid } from "@/components/hud/HudGrid";
 import { VotesDock } from "@/components/hud/VotesDock";
 import { ErrorState, LoadingRows } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEventos } from "@/hooks/useCamara";
+import { PainelAoVivo, PainelAoVivoSkeleton } from "@/components/hud/PainelAoVivo";
+import { useEventos, useSessaoCamara } from "@/hooks/useCamara";
+import { useSessaoSenado } from "@/hooks/useSenado";
 import { useQueryEnum } from "@/hooks/useUi";
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { addDays, formatTime, isoDate, startOfDay } from "@/lib/format";
+import type { SessaoAoVivoResult } from "@/lib/aoVivo";
 import type { Evento } from "@/lib/types";
 import { EventoItem } from "./EventoItem";
-import { SessaoAoVivo } from "./SessaoAoVivo";
 
 type Janela = "proximos" | "realizados";
 type Tipo = "todos" | "plenario" | "comissoes";
@@ -20,6 +22,12 @@ const TIPOS: readonly Tipo[] = ["todos", "plenario", "comissoes"];
 const diaFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 
 const ehPlenario = (e: Evento) => /^sess[ãa]o/i.test(e.tipo) || /^(PLEN|Plen[áa]rio)$/i.test(e.orgao ?? "");
+
+/** The live panel of one house, or its placeholder while the day is loading. */
+function PainelSessao({ resultado, titulo }: { resultado: SessaoAoVivoResult; titulo: string }) {
+  if (resultado.sessao) return <PainelAoVivo sessao={resultado.sessao} />;
+  return resultado.isLoading ? <PainelAoVivoSkeleton titulo={titulo} /> : null;
+}
 
 function ProximaSessao({ eventos, isLoading, agora }: { eventos: Evento[]; isLoading: boolean; agora: number }) {
   const futuros = eventos.filter((e) => new Date(e.inicio).getTime() >= agora && !/cancel/i.test(e.situacao));
@@ -62,7 +70,7 @@ function ProximaSessao({ eventos, isLoading, agora }: { eventos: Evento[]; isLoa
         <div className="flex justify-between py-1"><span className="label">No Plenário</span><span className="tn">{isLoading ? "—" : futuros.filter(ehPlenario).length}</span></div>
         <div className="flex justify-between py-1"><span className="label">Em comissões e outros</span><span className="tn">{isLoading ? "—" : futuros.filter((e) => !ehPlenario(e)).length}</span></div>
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-fg-4">A agenda completa do Senado ainda não está incluída — em sessão, a pauta aparece ao vivo acima; as votações do Senado aparecem no feed ao lado.</p>
+      <p className="mt-3 text-[11px] leading-relaxed text-fg-4">Em sessão, a pauta de cada Plenário aparece ao vivo acima; as votações de ambas as casas aparecem no feed ao lado.</p>
     </section>
   );
 }
@@ -76,6 +84,8 @@ export function AgendaView() {
   const realizadosQ = useEventos({ dataInicio: isoDate(addDays(hoje, -21)), dataFim: isoDate(hoje), ordem: "DESC" });
   const eventosQ = janela === "proximos" ? proximosQ : realizadosQ;
   const feed = useDeliberacoes();
+  const camara = useSessaoCamara();
+  const senado = useSessaoSenado();
   const todos = useMemo(() => eventosQ.data ?? [], [eventosQ.data]);
   const proximos = useMemo(() => proximosQ.data ?? [], [proximosQ.data]);
 
@@ -133,7 +143,8 @@ export function AgendaView() {
     <HudGrid
       left={
         <>
-          <SessaoAoVivo />
+          <PainelSessao resultado={camara} titulo="o Plenário da Câmara" />
+          <PainelSessao resultado={senado} titulo="o Plenário do Senado" />
           <ProximaSessao eventos={proximos} isLoading={proximosQ.isLoading} agora={agora} />
         </>
       }

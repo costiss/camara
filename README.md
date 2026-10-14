@@ -49,12 +49,13 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
 - **Lista** (`#/lista`) — every floor deliberation of both houses in a period
   (30/90 days or a year), faceted by result and bill type, with search and
   paging. A row opens the Votações panel on that vote.
-- **Agenda** — upcoming and past Câmara events with their pauta. While the
-  Senate floor is in session, the left column shows that session's order paper
-  live, refreshed on a timer and flagged by an **Ao vivo** badge in the header.
-  Each item carries its state: **decided** (with the announced verdict), **under
-  consideration** (the item the floor is on, marked as the focal point), or
-  **pending**.
+- **Agenda** — upcoming and past Câmara events with their pauta. While either
+  floor is in session, the left column shows that session's order paper live,
+  refreshed on a timer and flagged by an **Ao vivo** badge in the header (naming
+  the houses that are live). Each item carries its state: **decided** (with the
+  announced verdict), **under consideration** (the item the floor is on, marked
+  as the focal point), or **pending**. Only the decided items, the one on the
+  floor and a few pending ones are listed, so the panel stays short on a phone.
 
 Ctrl K searches deputies, senators and recent votes.
 
@@ -110,18 +111,21 @@ value is only written back to the URL when it differs from the screen's default.
 
 | Source | Base URL | Notes |
 | --- | --- | --- |
-| Câmara dos Deputados | `https://dadosabertos.camara.leg.br/api/v2` | Deputies (513), parties, propositions, tramitações, autores, votações + votos, eventos + pauta. Sends `X-Total-Count`, used for historical counts. |
+| Câmara dos Deputados | `https://dadosabertos.camara.leg.br/api/v2` | Deputies (513), parties, propositions, tramitações, autores, votações + votos, eventos + pauta. Sends `X-Total-Count`, used for historical counts. The plenary is live when an event reads `Em Andamento`; its order paper (`/eventos/{id}/pauta`) gives each item's `situacaoItem` and, once voted, its `uriVotacao`. |
 | Senado Federal | `https://legis.senado.leg.br/dadosabertos` | Senators (81), senator votes, recent floor votes (`/votacao`) and propositions (`/processo`). The day's plenário is live at `/plenario/agenda/dia/{AAAAMMDD}` (session status) and `/plenario/resultado/{AAAAMMDD}` (each item's result as it is decided). |
 
 Both APIs return `Access-Control-Allow-Origin: *`. The Câmara API rate-limits
 bursts, so the adapter runs its requests through a small concurrency limiter and
 the query client retries with backoff.
 
-Neither API pushes: "live" means polling. The Senate plenário endpoints are
-polled every 30 s only while a session is running (every 90 s otherwise, and
-never in a background tab), and the proxy caches them for 30 s, so every visitor
-together costs one upstream call per window rather than one each. The nominal
-roll-call (`/votacao`) still only arrives once the vote is recorded.
+Neither API pushes: "live" means polling. Both floors are polled every 30 s only
+while a session is running (every 90 s otherwise, and never in a background tab),
+and the proxy caches the live paths briefly (Senate plenário 30 s; Câmara order
+paper 30 s, events list 60 s), so every visitor together costs one upstream call
+per window rather than one each. The Câmara names the item on the floor directly
+(`situacaoItem`); the Senate has no such field, so the first undecided item is
+taken as the one under consideration. The nominal roll-call still only arrives
+once the vote is recorded.
 
 The API layer lives in `src/lib/api`:
 
@@ -151,7 +155,8 @@ domain without CORS or a rebuild.
 
 - **Shared cache** in memory, per path: a recorded roll-call or vote detail
   6 h, deputies 6 h, propositions 1 h, vote lists 5 min, events 10 min, and the
-  live Senate plenário agenda and results 30 s.
+  live Senate plenário agenda and results 30 s, and the Câmara order paper 30 s
+  (events list 60 s).
   Recently expired entries are served at once while a fresh copy is fetched
   in the background; when an API fails, the last good copy is served for up
   to 24 h. Size is capped (LRU, 256 MB by default).

@@ -181,39 +181,35 @@ export interface Evento {
   pauta: Proposicao[];
 }
 
-/** One item on the order paper of a Senate floor session. */
-export interface ItemPauta {
-  codigo: string;
+/** Where an order-paper item stands in a live floor session. */
+export type EstadoItem = "decidida" | "atual" | "pendente";
+
+/** One item on a live floor order paper, normalised across both houses. */
+export interface ItemAoVivo {
+  id: string;
   /** Short code of the matter, e.g. `PEC 221/2019`. */
-  sigla?: string;
-  identificacao: string;
-  cabecalho?: string;
+  sigla: string;
+  /** A short qualifier beside the code (the Senate's cabeçalho, the Câmara's topic). */
+  qualificador?: string;
   ementa?: string;
-  apreciacao?: string;
-  parecer?: string;
-  autor?: string;
-  /** "Não apreciado", "Apreciado", "Apreciação não concluída"… */
-  deliberacao?: string;
-  /** The Senate's own verdict flag: the item has been appreciated (voted). */
-  apreciado: boolean;
-  /** Result text announced for the item. */
-  resultado?: string;
-  votado: boolean;
-  materiaId?: number;
+  estado: EstadoItem;
+  /** Right-aligned status: the verdict when decided, the stage otherwise. */
+  rotulo: string;
+  /** Tone of `rotulo`, for a decided item. */
+  tone?: StatusTone;
+  /** A line under the item: the announced result, or the stage it is at. */
+  detalhe?: string;
   url?: string;
 }
 
-/** A Senate floor session; live while `emAndamento`. */
-export interface SessaoPlenario {
-  codigo: string;
-  numero?: string;
-  tipo?: string;
-  hora?: string;
-  casa?: string;
-  situacao?: string;
-  emAndamento: boolean;
-  evento?: string;
-  itens: ItemPauta[];
+/** A floor session currently in progress, in either house. */
+export interface SessaoAoVivo {
+  casa: Casa;
+  /** Card title, e.g. "Plenário do Senado". */
+  titulo: string;
+  /** Secondary line: session number, type, start time. */
+  meta?: string;
+  itens: ItemAoVivo[];
 }
 
 export interface Partido {

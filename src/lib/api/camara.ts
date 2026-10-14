@@ -11,10 +11,12 @@ import type {
   Partido,
   Placar,
   Proposicao,
+  SessaoAoVivo,
   Tramitacao,
   Votacao,
   VotoParlamentar,
 } from "../types";
+import { itemAoVivo } from "../aoVivo";
 import { VotoClassifier } from "../votos";
 import { CAMARA_BASE, VIA_PROXY } from "./config";
 import { createLimiter, getJson, getPaged, hasRel, type PagedResult } from "./http";
@@ -327,7 +329,7 @@ function mapPautaItem(item: RawPautaItem): Proposicao {
     ementa: item.situacaoItem ?? item.titulo,
     orgao: item.titulo,
     status: item.situacaoItem ?? undefined,
-    votado: !!item.uriVotacao || !!item.situacaoItem,
+    votado: !!item.uriVotacao,
   };
 }
 
@@ -502,6 +504,55 @@ export async function getEventoPauta(eventoId: number | string): Promise<Proposi
     `${BASE}/eventos/${eventoId}/pauta`
   );
   return (dados ?? []).map(mapPautaItem);
+}
+
+/* --------------------------- live floor session ------------------------- */
+
+const ehPlenariaEmCurso = (e: Evento) =>
+  /andamento/i.test(e.situacao) && (/^sess[ãa]o/i.test(e.tipo) || /^(PLEN|Plen[áa]rio)$/i.test(e.orgao ?? ""));
+
+/** The link a pauta item opens: its matter's page, when it has one. */
+function urlDoItem(item: RawPautaItem): string | undefined {
+  return item.proposicao_ ? mapProposicao(item.proposicao_).url : undefined;
+}
+
+function normalizarSessaoCamara(e: Evento, pauta: RawPautaItem[]): SessaoAoVivo {
+  const atual = pauta.findIndex((it) => it.situacaoItem && !it.uriVotacao);
+  return {
+    casa: "camara",
+    titulo: "Plenário da Câmara",
+    meta: [e.tipo, e.inicio.slice(11, 16)].filter(Boolean).join(" · "),
+    itens: pauta.map((it, i) =>
+      itemAoVivo({
+        id: it.titulo || String(it.ordem),
+        sigla: it.proposicao_ ? siglaDe(it.proposicao_) : it.titulo,
+        qualificador: it.topico,
+        ementa: it.proposicao_?.ementa ?? it.titulo,
+        decidida: !!it.uriVotacao,
+        atual: i === atual,
+        detalhe: it.situacaoItem ?? undefined,
+        pendente: "Na pauta",
+        url: urlDoItem(it),
+      })
+    ),
+  };
+}
+
+/**
+ * The Câmara plenary session in progress today, if any.
+ *
+ * The events list is one call; the order paper is fetched only while a session
+ * runs, and the proxy caches both paths briefly so every visitor shares one
+ * upstream call per window.
+ */
+export async function getSessaoCamara(data: string): Promise<SessaoAoVivo | undefined> {
+  const eventos = await getEventos({ dataInicio: data, dataFim: data, ordem: "ASC" });
+  const ativo = eventos.find(ehPlenariaEmCurso);
+  if (!ativo) return undefined;
+  const { dados } = await getApi<{ dados: RawPautaItem[] }>(
+    `${BASE}/eventos/${ativo.id.replace(/^camara-/, "")}/pauta`
+  );
+  return normalizarSessaoCamara(ativo, dados ?? []);
 }
 
 export async function countVotacoes(

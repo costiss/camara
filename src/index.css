@@ -529,6 +529,34 @@
     border-color: var(--color-line-3);
   }
 
+  /* Touch: the dense HUD controls are built for a pointer. On a coarse pointer
+     (phones, tablets) raise them to a comfortable hit area (WCAG 2.5.5). */
+  @media (pointer: coarse) {
+    .switch > button,
+    .switch > a {
+      height: 44px;
+      padding: 0 16px;
+    }
+    .switch-sm > button {
+      height: 38px;
+    }
+    .tabs-mini > button {
+      height: 38px;
+      padding: 0 12px;
+    }
+    .btn,
+    .btn-sm {
+      height: 44px;
+    }
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+    }
+    .field {
+      height: 44px;
+    }
+  }
+
   /* Rows / lists ---------------------------------------------------- */
   .rowline {
     border-top: 1px solid var(--color-line);

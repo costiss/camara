@@ -24,7 +24,7 @@ export function ListaView() {
   const visiveis = filtradas.slice(inicio, inicio + POR_PAGINA);
 
   return (
-    <div className="hud-grid hud-grid-2">
+    <div className="hud-grid hud-grid-2 hud-grid-centro">
       <div className="hud-col">
         <ListaFacetas
           filtro={filtro}
@@ -36,7 +36,7 @@ export function ListaView() {
         />
       </div>
 
-      <section className="card flex min-h-0 flex-col" aria-label="Lista de votações">
+      <section className="hud-center card flex min-h-0 flex-col" aria-label="Lista de votações">
         <div className="flex flex-wrap items-center gap-2">
           <div className="switch switch-sm" role="group" aria-label="Casa">
             {(Object.keys(CASA_LABEL) as (keyof typeof CASA_LABEL)[]).map((c) => (

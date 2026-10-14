@@ -6,7 +6,8 @@
  * `asArray` smooths that over. Media URLs sometimes come back as
  * `http://` and are upgraded to avoid mixed-content blocking.
  */
-import type { ContextoProposta, ItemPauta, Parlamentar, Proposicao, SessaoPlenario, Votacao, VotoParlamentar } from "../types";
+import type { ContextoProposta, Parlamentar, Proposicao, SessaoAoVivo, Votacao, VotoParlamentar } from "../types";
+import { itemAoVivo } from "../aoVivo";
 import { CADEIRAS, VotoClassifier, VoteTally } from "../votos";
 import { SENADO_BASE } from "./config";
 import { getJson } from "./http";
@@ -343,6 +344,30 @@ export async function getSenadoVotacoesDaMateria(codigoMateria: string): Promise
 
 /* --------------------------- live floor session ------------------------- */
 
+/** One item on the order paper of a Senate floor session. */
+interface ItemPauta {
+  codigo: string;
+  sigla?: string;
+  identificacao: string;
+  cabecalho?: string;
+  ementa?: string;
+  deliberacao?: string;
+  /** The Senate's own verdict flag: the item has been appreciated (voted). */
+  apreciado: boolean;
+  resultado?: string;
+  url?: string;
+}
+
+/** A Senate floor session; live while `emAndamento`. */
+interface SessaoPlenario {
+  codigo: string;
+  numero?: string;
+  tipo?: string;
+  hora?: string;
+  emAndamento: boolean;
+  itens: ItemPauta[];
+}
+
 interface RawAgendaSessao {
   CodigoSessao?: string;
   NumeroSessao?: string;
@@ -358,13 +383,10 @@ interface RawItemPauta {
   codigoMateria?: string;
   identificacao?: string;
   cabecalho?: string;
-  parecer?: string;
-  apreciacaoPapeleta?: string;
   ementaPapeleta?: string;
   siglaMateria?: string;
   numeroMateria?: string;
   anoMateria?: string;
-  autorMateria?: string;
   textoResultado?: string;
   descricaoDeliberacao?: string;
   indicadorDeliberacao?: string;
@@ -379,7 +401,6 @@ interface RawResultadoSessao {
 const semTraco = (data: string) => data.replace(/-/g, "");
 
 function mapItemPauta(it: RawItemPauta): ItemPauta {
-  const resultado = (it.textoResultado ?? "").trim();
   const numero = (it.numeroMateria ?? "").replace(/^0+(?=\d)/, "");
   return {
     codigo: String(it.codigoItem ?? ""),
@@ -387,22 +408,17 @@ function mapItemPauta(it: RawItemPauta): ItemPauta {
     identificacao: (it.identificacao ?? "").trim(),
     cabecalho: it.cabecalho?.trim() || undefined,
     ementa: it.ementaPapeleta,
-    apreciacao: it.apreciacaoPapeleta,
-    parecer: it.parecer,
-    autor: it.autorMateria,
     deliberacao: it.descricaoDeliberacao,
     apreciado: it.indicadorDeliberacao === "S",
-    resultado: resultado || undefined,
-    votado: !!resultado || /aprovad|rejeitad|prejudicad|retirad/i.test(it.descricaoDeliberacao ?? ""),
-    materiaId: it.codigoMateria ? Number(it.codigoMateria) : undefined,
+    resultado: (it.textoResultado ?? "").trim() || undefined,
     url: it.codigoMateria
       ? `https://www25.senado.leg.br/web/atividade/materias/-/materia/${it.codigoMateria}`
       : undefined,
   };
 }
 
-/** The day's floor agenda; `situacao` says whether a session is running. */
-export async function getPlenarioAgenda(data: string): Promise<SessaoPlenario[]> {
+/** The day's floor agenda; `SituacaoSessao` says whether a session is running. */
+async function getPlenarioAgenda(data: string): Promise<SessaoPlenario[]> {
   const d = await getJson<{ AgendaPlenario?: { Sessoes?: { Sessao?: RawAgendaSessao | RawAgendaSessao[] } } }>(
     `${BASE}/plenario/agenda/dia/${semTraco(data)}`
   );
@@ -411,10 +427,7 @@ export async function getPlenarioAgenda(data: string): Promise<SessaoPlenario[]>
     numero: (s.NumeroSessao ?? "").match(/\d+/)?.[0],
     tipo: s.TipoSessao?.trim(),
     hora: s.Hora?.trim(),
-    casa: s.Casa,
-    situacao: s.SituacaoSessao,
     emAndamento: /andamento/i.test(s.SituacaoSessao ?? ""),
-    evento: s.Evento?.DescricaoEvento,
     itens: [],
   }));
 }
@@ -430,17 +443,50 @@ async function getPlenarioResultado(data: string): Promise<Map<string, ItemPauta
   return out;
 }
 
+/** The Senate announces the outcome in prose; read the matéria clause out of it. */
+function clausulaMateria(texto: string): string {
+  const m = /resultado da mat[ée]ria:\s*([^\n]*)/i.exec(texto);
+  return (m?.[1] ?? texto.split("\n").find((l) => l.trim()) ?? "").trim();
+}
+
+function rotuloPendente(deliberacao?: string): string {
+  return /não concluída/i.test(deliberacao ?? "") ? "Discussão em andamento" : "Ainda não votado";
+}
+
+function normalizar(s: SessaoPlenario): SessaoAoVivo {
+  const atual = s.itens.findIndex((it) => !it.apreciado);
+  return {
+    casa: "senado",
+    titulo: "Plenário do Senado",
+    meta: [s.numero && `${s.numero}ª sessão`, s.tipo?.toLowerCase(), s.hora].filter(Boolean).join(" · "),
+    itens: s.itens.map((it, i) =>
+      itemAoVivo({
+        id: it.codigo || String(i),
+        sigla: it.sigla ?? it.identificacao,
+        qualificador: it.cabecalho,
+        ementa: it.ementa,
+        decidida: it.apreciado,
+        atual: i === atual,
+        detalhe: it.apreciado && it.resultado ? clausulaMateria(it.resultado) : undefined,
+        pendente: rotuloPendente(it.deliberacao),
+        url: it.url,
+      })
+    ),
+  };
+}
+
 /**
- * The day's floor sessions, each item carrying its result once a session runs.
+ * The Senate floor session in progress, if any.
  *
  * The agenda is one call; the order-paper results are fetched only while a
- * session is in progress, so an idle day costs a single (cached) request. The
+ * session is running, so an idle day costs a single (cached) request. The
  * server caches both paths briefly, so every visitor shares one upstream call
  * per window instead of one each.
  */
-export async function getSessaoAoVivo(data: string): Promise<SessaoPlenario[]> {
+export async function getSessaoSenado(data: string): Promise<SessaoAoVivo | undefined> {
   const agenda = await getPlenarioAgenda(data);
-  if (!agenda.some((s) => s.emAndamento)) return agenda;
+  const ativa = agenda.find((s) => s.emAndamento);
+  if (!ativa) return undefined;
   const resultado = await getPlenarioResultado(data);
-  return agenda.map((s) => ({ ...s, itens: resultado.get(s.codigo) ?? [] }));
+  return normalizar({ ...ativa, itens: resultado.get(ativa.codigo) ?? [] });
 }

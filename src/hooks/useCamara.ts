@@ -1,5 +1,7 @@
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import type { Periodo } from "@/lib/periodo";
+import type { SessaoAoVivoResult } from "@/lib/aoVivo";
+import { useSessao } from "./useSessao";
 import {
   countVotacoes,
   getAutores,
@@ -11,6 +13,7 @@ import {
   getProposicao,
   getProposicaoVotacoes,
   getProposicoesPorAutor,
+  getSessaoCamara,
   getTramitacoes,
   getVotacao,
   getVotacoesPlenario,
@@ -165,6 +168,14 @@ export function useEventoPauta(eventoId?: number | string) {
     enabled: eventoId !== undefined && eventoId !== null,
     staleTime: STALE,
   });
+}
+
+/**
+ * The Câmara plenary session in progress, refreshed on a timer while it runs.
+ * Same cadence and caching as the Senate panel.
+ */
+export function useSessaoCamara(): SessaoAoVivoResult {
+  return useSessao("camara", getSessaoCamara);
 }
 
 /** Historical series: votes per month over a window. */
