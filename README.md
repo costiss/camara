@@ -73,6 +73,12 @@ Defaults are left out of the URL.
 Example: `#/lista?casa=senado&periodo=2025&tipo=PEC&resultado=aprovada`.
 Old links such as `#/pecs` are rewritten to their list equivalent.
 
+One filter is a *preference*, not a link: **Só com votação nominal**. It is
+remembered in `localStorage` (`congresso-aberto:nominal`), so the feed and the
+list keep the visitor's choice between visits. When the URL carries `nominal`
+explicitly, it wins for that screen — a shared link keeps its meaning — and the
+value is only written back to the URL when it differs from the screen's default.
+
 ## How votes are read
 
 - Titles are written in everyday language from the official summary

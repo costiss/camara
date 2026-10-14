@@ -12,7 +12,8 @@ import { useFiltroVotacoes } from "./useFiltroVotacoes";
 const CASA_LABEL = { ambas: "Ambas", camara: "Câmara", senado: "Senado" } as const;
 
 export function ListaView() {
-  const { filtro, definir } = useFiltroVotacoes();
+  const { filtro, definir, nominal } = useFiltroVotacoes();
+  const [soNominais, setSoNominais] = nominal;
   const feed = useDeliberacoes(filtro.casa, filtro.periodo);
   const opcoes = useMemo(() => Periodo.opcoes(), []);
 
@@ -65,7 +66,7 @@ export function ListaView() {
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-fg-3">
           <label className="inline-flex cursor-pointer items-center gap-2">
-            <input type="checkbox" className="accent-[var(--color-fg)]" checked={filtro.nominal} onChange={(e) => definir({ nominal: e.target.checked ? "1" : null })} />
+            <input type="checkbox" className="accent-[var(--color-fg)]" checked={soNominais} onChange={(e) => setSoNominais(e.target.checked)} />
             Só com votação nominal
           </label>
           <div className="tabs-mini" role="group" aria-label="Ordem">
@@ -76,7 +77,10 @@ export function ListaView() {
             <button
               type="button"
               className="link ml-auto"
-              onClick={() => definir({ tipo: null, resultado: null, nominal: null, q: null })}
+              onClick={() => {
+                setSoNominais(false);
+                definir({ tipo: null, resultado: null, q: null });
+              }}
             >
               Limpar {filtro.ativos} {filtro.ativos === 1 ? "filtro" : "filtros"}
             </button>

@@ -7,6 +7,7 @@ import { HeroSkeleton, MapaCantoSkeleton, PartyBreakdownSkeleton } from "@/compo
 import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { useVotacaoCompleta } from "@/hooks/useVotacaoCompleta";
 import { router, useQueryParam, useRoute } from "@/hooks/useUi";
+import { useNominal } from "@/hooks/useNominal";
 import { DeliberacaoSteps } from "./DeliberacaoSteps";
 import { ParaLeigos } from "./ParaLeigos";
 import { PartyBreakdown } from "./PartyBreakdown";
@@ -30,8 +31,7 @@ export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
   );
 
   const [uf, selectUf] = useQueryParam("uf");
-  const [nominal, setNominal] = useQueryParam("nominal", "1");
-  const soNominais = nominal !== "0";
+  const [soNominais, setSoNominais] = useNominal(true);
   const activeUf = uf || null;
   const rollCall = query.get("chamada") === "1";
   const setRollCall = (aberta: boolean) =>
@@ -85,7 +85,7 @@ export function VotacoesView({ votacaoId }: { votacaoId?: string }) {
         isError={feed.isError}
         onRetry={feed.refetch}
         soNominais={soNominais}
-        onSoNominais={(ativo) => setNominal(ativo ? "1" : "0")}
+        onSoNominais={setSoNominais}
       />
     </>
   );

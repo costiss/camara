@@ -31,12 +31,16 @@ export class FiltroVotacoes {
   readonly ordem: Ordem;
   readonly pagina: number;
 
-  constructor(query: URLSearchParams) {
+  /**
+   * `nominal` defaults to the URL, but callers may pass the value already
+   * resolved against the visitor's saved preference (see useNominal).
+   */
+  constructor(query: URLSearchParams, nominal = query.get("nominal") === "1") {
     this.casa = escolher(query.get("casa"), CASAS, "ambas");
     this.periodo = query.get("periodo") ?? Periodo.PADRAO;
     this.tipo = query.get("tipo") ?? "";
     this.resultado = escolher(query.get("resultado"), RESULTADOS, "todos");
-    this.nominal = query.get("nominal") === "1";
+    this.nominal = nominal;
     this.busca = query.get("q") ?? "";
     this.ordem = escolher(query.get("ordem"), ORDENS, "recentes");
     this.pagina = Math.max(1, Number(query.get("pagina")) || 1);
