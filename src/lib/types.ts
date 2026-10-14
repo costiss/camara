@@ -192,9 +192,11 @@ export interface ItemPauta {
   apreciacao?: string;
   parecer?: string;
   autor?: string;
-  /** "Não apreciado", "Aprovado", "Rejeitado"… — filled in as the item is decided. */
+  /** "Não apreciado", "Apreciado", "Apreciação não concluída"… */
   deliberacao?: string;
-  /** Result text announced for the item (placar and all). */
+  /** The Senate's own verdict flag: the item has been appreciated (voted). */
+  apreciado: boolean;
+  /** Result text announced for the item. */
   resultado?: string;
   votado: boolean;
   materiaId?: number;

@@ -51,8 +51,10 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
   paging. A row opens the Votações panel on that vote.
 - **Agenda** — upcoming and past Câmara events with their pauta. While the
   Senate floor is in session, the left column shows that session's order paper
-  live (each item's outcome as it is decided), refreshed on a timer and flagged
-  by an **Ao vivo** badge in the header.
+  live, refreshed on a timer and flagged by an **Ao vivo** badge in the header.
+  Each item carries its state: **decided** (with the announced verdict), **under
+  consideration** (the item the floor is on, marked as the focal point), or
+  **pending**.
 
 Ctrl K searches deputies, senators and recent votes.
 

@@ -367,6 +367,7 @@ interface RawItemPauta {
   autorMateria?: string;
   textoResultado?: string;
   descricaoDeliberacao?: string;
+  indicadorDeliberacao?: string;
 }
 
 interface RawResultadoSessao {
@@ -390,6 +391,7 @@ function mapItemPauta(it: RawItemPauta): ItemPauta {
     parecer: it.parecer,
     autor: it.autorMateria,
     deliberacao: it.descricaoDeliberacao,
+    apreciado: it.indicadorDeliberacao === "S",
     resultado: resultado || undefined,
     votado: !!resultado || /aprovad|rejeitad|prejudicad|retirad/i.test(it.descricaoDeliberacao ?? ""),
     materiaId: it.codigoMateria ? Number(it.codigoMateria) : undefined,
