@@ -104,7 +104,7 @@ export function DeliberacaoFeed({
         </div>
       )}
       {!isLoading && filtradas.length > limit && (
-        <a href={routeHref("lista", undefined, { casa, nominal: soNominais ? "1" : null })} className="btn btn-sm btn-block mt-3 no-underline">
+        <a href={routeHref("lista", undefined, { casa, nominal: soNominais ? "1" : "0" })} className="btn btn-sm btn-block mt-3 no-underline">
           Ver todas as {filtradas.length} na lista
         </a>
       )}
