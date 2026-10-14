@@ -46,6 +46,10 @@ var camaraTTL = TTLPolicy{
 
 var senadoTTL = TTLPolicy{
 	Rules: []TTLRule{
+		// Live floor activity: short enough to feel current, long enough that
+		// every visitor together costs one upstream call per window.
+		rule(`^/plenario/agenda/dia/`, 30*time.Second),
+		rule(`^/plenario/resultado/`, 30*time.Second),
 		rule(`^/votacao`, 10*time.Minute),
 		rule(`^/senador`, 6*time.Hour),
 		rule(`^/processo`, time.Hour),

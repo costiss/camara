@@ -6,7 +6,7 @@
  * `asArray` smooths that over. Media URLs sometimes come back as
  * `http://` and are upgraded to avoid mixed-content blocking.
  */
-import type { ContextoProposta, Parlamentar, Proposicao, Votacao, VotoParlamentar } from "../types";
+import type { ContextoProposta, ItemPauta, Parlamentar, Proposicao, SessaoPlenario, Votacao, VotoParlamentar } from "../types";
 import { CADEIRAS, VotoClassifier, VoteTally } from "../votos";
 import { SENADO_BASE } from "./config";
 import { getJson } from "./http";
@@ -339,4 +339,106 @@ export async function getAutoriaSenador(codigo: string, nome?: string): Promise<
 export async function getSenadoVotacoesDaMateria(codigoMateria: string): Promise<Votacao[]> {
   const data = await getJson<RawVotacaoPlenario[]>(`${BASE}/votacao?codigoMateria=${encodeURIComponent(codigoMateria)}`);
   return asArray(data).filter((v) => v.dataSessao && v.codigoSessaoVotacao).map(mapVotacaoPlenario);
+}
+
+/* --------------------------- live floor session ------------------------- */
+
+interface RawAgendaSessao {
+  CodigoSessao?: string;
+  NumeroSessao?: string;
+  TipoSessao?: string;
+  Hora?: string;
+  Casa?: string;
+  SituacaoSessao?: string;
+  Evento?: { DescricaoEvento?: string };
+}
+
+interface RawItemPauta {
+  codigoItem?: string;
+  codigoMateria?: string;
+  identificacao?: string;
+  cabecalho?: string;
+  parecer?: string;
+  apreciacaoPapeleta?: string;
+  ementaPapeleta?: string;
+  siglaMateria?: string;
+  numeroMateria?: string;
+  anoMateria?: string;
+  autorMateria?: string;
+  textoResultado?: string;
+  descricaoDeliberacao?: string;
+}
+
+interface RawResultadoSessao {
+  codigoSessao?: string | number;
+  Itens?: { Item?: RawItemPauta | RawItemPauta[] };
+}
+
+/** The plenário endpoints key on a compact date: `2026-10-14` → `20261014`. */
+const semTraco = (data: string) => data.replace(/-/g, "");
+
+function mapItemPauta(it: RawItemPauta): ItemPauta {
+  const resultado = (it.textoResultado ?? "").trim();
+  const numero = (it.numeroMateria ?? "").replace(/^0+(?=\d)/, "");
+  return {
+    codigo: String(it.codigoItem ?? ""),
+    sigla: it.siglaMateria ? `${it.siglaMateria} ${numero}/${it.anoMateria ?? ""}`.trim() : undefined,
+    identificacao: (it.identificacao ?? "").trim(),
+    cabecalho: it.cabecalho?.trim() || undefined,
+    ementa: it.ementaPapeleta,
+    apreciacao: it.apreciacaoPapeleta,
+    parecer: it.parecer,
+    autor: it.autorMateria,
+    deliberacao: it.descricaoDeliberacao,
+    resultado: resultado || undefined,
+    votado: !!resultado || /aprovad|rejeitad|prejudicad|retirad/i.test(it.descricaoDeliberacao ?? ""),
+    materiaId: it.codigoMateria ? Number(it.codigoMateria) : undefined,
+    url: it.codigoMateria
+      ? `https://www25.senado.leg.br/web/atividade/materias/-/materia/${it.codigoMateria}`
+      : undefined,
+  };
+}
+
+/** The day's floor agenda; `situacao` says whether a session is running. */
+export async function getPlenarioAgenda(data: string): Promise<SessaoPlenario[]> {
+  const d = await getJson<{ AgendaPlenario?: { Sessoes?: { Sessao?: RawAgendaSessao | RawAgendaSessao[] } } }>(
+    `${BASE}/plenario/agenda/dia/${semTraco(data)}`
+  );
+  return asArray(d.AgendaPlenario?.Sessoes?.Sessao).map((s) => ({
+    codigo: String(s.CodigoSessao ?? ""),
+    numero: (s.NumeroSessao ?? "").match(/\d+/)?.[0],
+    tipo: s.TipoSessao?.trim(),
+    hora: s.Hora?.trim(),
+    casa: s.Casa,
+    situacao: s.SituacaoSessao,
+    emAndamento: /andamento/i.test(s.SituacaoSessao ?? ""),
+    evento: s.Evento?.DescricaoEvento,
+    itens: [],
+  }));
+}
+
+async function getPlenarioResultado(data: string): Promise<Map<string, ItemPauta[]>> {
+  const d = await getJson<{ ResultadoPlenario?: { Sessoes?: { Sessao?: RawResultadoSessao | RawResultadoSessao[] } } }>(
+    `${BASE}/plenario/resultado/${semTraco(data)}`
+  );
+  const out = new Map<string, ItemPauta[]>();
+  for (const s of asArray(d.ResultadoPlenario?.Sessoes?.Sessao)) {
+    out.set(String(s.codigoSessao ?? ""), asArray(s.Itens?.Item).map(mapItemPauta));
+  }
+  return out;
+}
+
+/**
+ * The day's floor sessions, each item carrying its result once a session runs.
+ *
+ * The agenda is one call; the order-paper results are fetched only while a
+ * session is in progress, so an idle day costs a single (cached) request. The
+ * server caches both paths briefly, so every visitor shares one upstream call
+ * per window instead of one each.
+ */
+export async function getSessaoAoVivo(data: string): Promise<SessaoPlenario[]> {
+  const agenda = await getPlenarioAgenda(data);
+  if (!agenda.some((s) => s.emAndamento)) return agenda;
+  const resultado = await getPlenarioResultado(data);
+  return agenda.map((s) => ({ ...s, itens: resultado.get(s.codigo) ?? [] }));
 }

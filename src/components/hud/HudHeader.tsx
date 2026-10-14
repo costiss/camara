@@ -3,6 +3,7 @@ import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { Maximize, Minimize, RefreshCw, Search } from "lucide-react";
 import { routeHref, type View } from "@/hooks/useUi";
 import { cn } from "@/lib/utils";
+import { AoVivoBadge } from "./AoVivoBadge";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "votacoes", label: "Votações" },
@@ -94,7 +95,8 @@ export function HudHeader({ view, onSearch }: { view: View; onSearch: () => void
           <Search className="h-4 w-4" />
         </button>
       </div>
-      <div className="flex items-center justify-between lg:hidden">
+      <div className="flex items-center justify-between gap-3 lg:hidden">
+        <AoVivoBadge />
         <StatusLine />
       </div>
       <ViewSwitch view={view} className="w-full lg:w-auto [&>a]:flex-1 [&>a]:px-1.5 max-[380px]:[&>a]:px-1 max-[380px]:[&>a]:text-[12px] sm:[&>a]:px-2.5 lg:[&>a]:flex-none lg:[&>a]:px-3.5" />
@@ -108,6 +110,7 @@ export function HudHeader({ view, onSearch }: { view: View; onSearch: () => void
         <span className="kbd">Ctrl K</span>
       </button>
       <div className="ml-auto hidden items-center gap-3 lg:flex">
+        <AoVivoBadge />
         <StatusLine />
         <FullscreenButton />
       </div>

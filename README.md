@@ -49,7 +49,10 @@ Brazil map, Faustina serif figures and a timeline dock at the bottom.
 - **Lista** (`#/lista`) — every floor deliberation of both houses in a period
   (30/90 days or a year), faceted by result and bill type, with search and
   paging. A row opens the Votações panel on that vote.
-- **Agenda** — upcoming and past Câmara events with their pauta.
+- **Agenda** — upcoming and past Câmara events with their pauta. While the
+  Senate floor is in session, the left column shows that session's order paper
+  live (each item's outcome as it is decided), refreshed on a timer and flagged
+  by an **Ao vivo** badge in the header.
 
 Ctrl K searches deputies, senators and recent votes.
 
@@ -100,11 +103,17 @@ Old links such as `#/pecs` are rewritten to their list equivalent.
 | Source | Base URL | Notes |
 | --- | --- | --- |
 | Câmara dos Deputados | `https://dadosabertos.camara.leg.br/api/v2` | Deputies (513), parties, propositions, tramitações, autores, votações + votos, eventos + pauta. Sends `X-Total-Count`, used for historical counts. |
-| Senado Federal | `https://legis.senado.leg.br/dadosabertos` | Senators (81), senator votes, recent floor votes (`/votacao`) and propositions (`/processo`). |
+| Senado Federal | `https://legis.senado.leg.br/dadosabertos` | Senators (81), senator votes, recent floor votes (`/votacao`) and propositions (`/processo`). The day's plenário is live at `/plenario/agenda/dia/{AAAAMMDD}` (session status) and `/plenario/resultado/{AAAAMMDD}` (each item's result as it is decided). |
 
 Both APIs return `Access-Control-Allow-Origin: *`. The Câmara API rate-limits
 bursts, so the adapter runs its requests through a small concurrency limiter and
 the query client retries with backoff.
+
+Neither API pushes: "live" means polling. The Senate plenário endpoints are
+polled every 30 s only while a session is running (every 90 s otherwise, and
+never in a background tab), and the proxy caches them for 30 s, so every visitor
+together costs one upstream call per window rather than one each. The nominal
+roll-call (`/votacao`) still only arrives once the vote is recorded.
 
 The API layer lives in `src/lib/api`:
 
@@ -133,7 +142,8 @@ the same origin (`/api/camara/*`, `/api/senado/*`), so the app works on any
 domain without CORS or a rebuild.
 
 - **Shared cache** in memory, per path: a recorded roll-call or vote detail
-  6 h, deputies 6 h, propositions 1 h, vote lists 5 min, events 10 min.
+  6 h, deputies 6 h, propositions 1 h, vote lists 5 min, events 10 min, and the
+  live Senate plenário agenda and results 30 s.
   Recently expired entries are served at once while a fresh copy is fetched
   in the background; when an API fails, the last good copy is served for up
   to 24 h. Size is capped (LRU, 256 MB by default).

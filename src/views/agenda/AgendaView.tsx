@@ -10,6 +10,7 @@ import { useDeliberacoes } from "@/hooks/useDeliberacoes";
 import { addDays, formatTime, isoDate, startOfDay } from "@/lib/format";
 import type { Evento } from "@/lib/types";
 import { EventoItem } from "./EventoItem";
+import { SessaoAoVivo } from "./SessaoAoVivo";
 
 type Janela = "proximos" | "realizados";
 type Tipo = "todos" | "plenario" | "comissoes";
@@ -61,7 +62,7 @@ function ProximaSessao({ eventos, isLoading, agora }: { eventos: Evento[]; isLoa
         <div className="flex justify-between py-1"><span className="label">No Plenário</span><span className="tn">{isLoading ? "—" : futuros.filter(ehPlenario).length}</span></div>
         <div className="flex justify-between py-1"><span className="label">Em comissões e outros</span><span className="tn">{isLoading ? "—" : futuros.filter((e) => !ehPlenario(e)).length}</span></div>
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-fg-4">A agenda do Senado ainda não está incluída; as votações do Senado aparecem no feed ao lado.</p>
+      <p className="mt-3 text-[11px] leading-relaxed text-fg-4">A agenda completa do Senado ainda não está incluída — em sessão, a pauta aparece ao vivo acima; as votações do Senado aparecem no feed ao lado.</p>
     </section>
   );
 }
@@ -130,7 +131,12 @@ export function AgendaView() {
 
   return (
     <HudGrid
-      left={<ProximaSessao eventos={proximos} isLoading={proximosQ.isLoading} agora={agora} />}
+      left={
+        <>
+          <SessaoAoVivo />
+          <ProximaSessao eventos={proximos} isLoading={proximosQ.isLoading} agora={agora} />
+        </>
+      }
       center={center}
       dock={<VotesDock deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} />}
       right={<DeliberacaoFeed deliberacoes={feed.deliberacoes} isLoading={feed.isLoading} isError={feed.isError} onRetry={feed.refetch} />}

@@ -181,6 +181,39 @@ export interface Evento {
   pauta: Proposicao[];
 }
 
+/** One item on the order paper of a Senate floor session. */
+export interface ItemPauta {
+  codigo: string;
+  /** Short code of the matter, e.g. `PEC 221/2019`. */
+  sigla?: string;
+  identificacao: string;
+  cabecalho?: string;
+  ementa?: string;
+  apreciacao?: string;
+  parecer?: string;
+  autor?: string;
+  /** "Não apreciado", "Aprovado", "Rejeitado"… — filled in as the item is decided. */
+  deliberacao?: string;
+  /** Result text announced for the item (placar and all). */
+  resultado?: string;
+  votado: boolean;
+  materiaId?: number;
+  url?: string;
+}
+
+/** A Senate floor session; live while `emAndamento`. */
+export interface SessaoPlenario {
+  codigo: string;
+  numero?: string;
+  tipo?: string;
+  hora?: string;
+  casa?: string;
+  situacao?: string;
+  emAndamento: boolean;
+  evento?: string;
+  itens: ItemPauta[];
+}
+
 export interface Partido {
   sigla: string;
   nome: string;
